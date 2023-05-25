@@ -87,7 +87,7 @@ func conv(a: string, dest: type int): int = parseInt a
 func conv(a: string, dest: type string): string = a
 func conv(a: string, dest: type float): float = parseFloat a
 
-proc fromForm*[T](data: StringTableRef): T =
+proc fromForm*[T: tuple](data: StringTableRef | Table[string, string]): T =
   for k, v in result.fieldPairs:
     v = conv(data[k], v.type)
 
@@ -120,7 +120,7 @@ func toSelect(formName, formLabel: string, defaultValue: NimNode,
 
 func vbtn(content: string): NimNode =
   quote:
-    button(class = "w-100"):
+    button(class = "w-100 btn btn-primary mt-4"):
       text `content`
 
 # ---
@@ -197,7 +197,7 @@ macro kform*(inputs, stmt): untyped =
     newColonExpr(ident"toVNode", newproc(
       params = @[ident"VNode"] & inputs.toseq.map(n => newIdentDefs(n[0], n[1])),
       body = newCall(ident"buildHTML", ident"tdiv", htmlform))),
-    newColonExpr(ident"dataStructure",
+    newColonExpr(ident"data",
       newCall(ident"default", newTupleDef entries)))
 
   echo repr result
@@ -210,4 +210,4 @@ when isMainModule:
       submit "login"
 
   echo ff.toVNode("hey")
-  echo ff.dataStructure.type
+  echo ff.data.type

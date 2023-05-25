@@ -1,4 +1,4 @@
-import std/json
+import std/[json, strtabs]
 import jester, karax/[karaxdsl, vdom]
 import kform, db
 
@@ -76,18 +76,19 @@ when isMainModule:
   echo buyTicketForm.toVNode(10, @[1, 2, 3])
 
 
-
+template parseForm(form): untyped {.dirty.} =
+  fromForm[form.data.type](request.params)
 
 when isMainModule:
   initDB()
-
 
   routes:
     get "/":
       resp $page("index", wrapForm("/login", loginForm.toVNode()))
 
     post "/login":
-      resp %*request.params
+      let t = parseForm loginForm
+      resp t.uname
 
     get "/companies":
       resp %*getAllAirCompanies()
