@@ -40,7 +40,7 @@ func wrapForm*(action: string, child: VNode, `method` = "POST"): VNode =
 let
   loginForm = kform ():
     uname as "user name": input string = ""
-    pass as "password": input string = "" # Password
+    pass as "password": input Secret = "" # Password
     submit "login"
 
   airCompanyForm = kform (id: int, cname: string):

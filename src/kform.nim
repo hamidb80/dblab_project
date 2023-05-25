@@ -1,4 +1,4 @@
-import std/[macros, strformat, options, strtabs, strutils, sequtils, sugar]
+import std/[macros, strformat, options, strtabs, strutils, sequtils, sugar, times]
 import karax/[karaxdsl, vdom], jester
 import macroplus
 
@@ -83,9 +83,22 @@ func newTupleDef(identDefs: seq[NimNode]): NimNode =
 
 template `?`(T: typedesc): untyped = Option[T]
 
+type Secret* = object
+
+func htmlType*(T: type int): string = "input"
+func htmlType*(T: type string): string = "input"
+func htmlType*(T: type Secret): string = "password"
+func htmlType*(T: type DateTime): string = "datetime-local"
+
+template nimtype*(T: type int): untyped = int
+template nimtype*(T: type string): untyped = string
+template nimtype*(T: type Secret): untyped = string
+template nimtype*(T: type DateTime): untyped = DateTime
+
 func conv(a: string, dest: type int): int = parseInt a
 func conv(a: string, dest: type string): string = a
 func conv(a: string, dest: type float): float = parseFloat a
+func conv(a: string, dest: type DateTime): float = parse a # TODO https://nim-lang.org/docs/times.html
 
 proc fromForm*[T: tuple](data: StringTableRef | Table[string, string]): T =
   for k, v in result.fieldPairs:
@@ -97,13 +110,14 @@ func toHiddenInput(formName: string, defaultValue: NimNode): NimNode =
   quote:
     input(name = `formName`, type = "hidden", value = $`defaultValue`)
 
-func toInput(formName, formLabel: string, defaultValue: NimNode): NimNode =
+func toInput(formName, formLabel: string, inputtype,
+    defaultValue: NimNode): NimNode =
   quote:
     tdiv:
       label:
         text `formLabel`
 
-      input(name = `formName`, class = "form-control",
+      input(name = `formName`, class = "form-control", type = `inputtype`,
           value = $`defaultValue`)
 
 func toSelect(formName, formLabel: string, defaultValue: NimNode,
@@ -151,6 +165,7 @@ macro kform*(inputs, stmt): untyped =
           value = action[AsgnRightSide]
           spec = action[AsgnLeftSide]
           dataType = spec[CommandArgs[0]]
+          dataTypeResolved = newcall(ident"nimtype", dataType)
           (elem, index) = block:
             let t = spec.callee
             case t.kind
@@ -161,15 +176,16 @@ macro kform*(inputs, stmt): untyped =
           vnode =
             case elem:
             of "input":
-              entries.add newIdentDefs(key, dataType)
-              toInput(key.strVal, label.strval, value)
+              entries.add newIdentDefs(key, dataTypeResolved)
+              toInput(key.strVal, label.strval, newcall(ident"htmltype",
+                  dataType), value)
 
             of "hidden":
-              entries.add newIdentDefs(key, dataType)
+              entries.add newIdentDefs(key, dataTypeResolved)
               toHiddenInput(key.strVal, value)
 
             of "select":
-              entries.add newIdentDefs(key, dataType)
+              entries.add newIdentDefs(key, dataTypeResolved)
               toSelect(key.strVal, label.strval, value, index)
 
             else: raisee ValueError, "invalid form entity"
@@ -206,7 +222,7 @@ when isMainModule:
   let
     ff = kform (du: string):
       uname as "user name": input string = du
-      pass as "password": input string = ""
+      pass as "password": input Secret = ""
       submit "login"
 
   echo ff.toVNode("hey")
