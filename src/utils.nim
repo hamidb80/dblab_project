@@ -6,3 +6,5 @@ template i*(smth: string): int =
 template toStr*(smth): int =
   $smth
 
+template raisee*(err, msg): untyped =
+  raise newException(err, msg)

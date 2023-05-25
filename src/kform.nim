@@ -1,87 +1,18 @@
 import std/[macros, strformat, options, strtabs, strutils, sequtils, sugar, times]
 import karax/[karaxdsl, vdom], jester
 import macroplus
-
-##
-## type
-##   KFormCollection = object
-##     inititializer: proc
-##     parser: proc
-##
-
-# type
-#   Form = object
-#     fields: seq[FormField]
-
-#   FormField = object
-#     kind: FormFieldKind
-#     name: string
-#     features
-
-#   FormFieldKind = enum
-#     ffkInput
-#     ffkHidden
-#     ffkSelect
-
+import utils
 
 # --- meta
-
-template getAssert(node: NimNode, k: NimNodeKind, pattern: NimNode): untyped =
-  if node.kind == k:
-    replaceIdent node, ident"_", pattern
-  else:
-    raisee ValueError, "invalid node kind: '" & $node.kind & "' expected '" &
-        $k & "' for " & node.repr
-
-template q(code): untyped = inlineQuote code
-
-template raisee(err, msg): untyped =
-  raise newException(err, msg)
-
-template `:=`(container, value): untyped =
-  let container = value
-  value
-
-func replaceIdent(what, sub, repl: NimNode): NimNode =
-  case what.kind
-  of AtomicNodes:
-    result =
-      if what == sub: repl
-      else: what
-  else:
-    for n in what:
-      result = copyNimNode what
-      result.add replaceIdent(n, sub, repl)
-
 
 func callee(n: NimNode): NimNode =
   expectKind n, {nnkCommand, nnkCall}
   n[CallIdent]
 
-template emp: untyped =
-  newEmptyNode()
-
-func newTypeSection(typedef: NimNode): NimNode =
-  newTree(nnkTypeSection, typedef)
-
-func newTypeDef(obj: NimNode, name: string): NimNode =
-  newTree(nnkTypeDef,
-    exported ident name,
-    emp,
-    obj)
-
-func newObjectDef(identDefs: seq[NimNode]): NimNode =
-  newTree(nnkObjectTy,
-    emp,
-    emp,
-    newNimNode(nnkRecList).add identDefs)
-
 func newTupleDef(identDefs: seq[NimNode]): NimNode =
   newTree(nnkTupleTy).add identDefs
 
 # ---
-
-template `?`(T: typedesc): untyped = Option[T]
 
 type Secret* = object
 
@@ -99,7 +30,7 @@ func conv(a: string, dest: type int): int = parseInt a
 func conv(a: string, dest: type string): string = a
 func conv(a: string, dest: type float): float = parseFloat a
 
-# TODO https://nim-lang.org/docs/times.html
+# FIXME https://nim-lang.org/docs/times.html
 proc conv(a: string, dest: type DateTime): DateTime = now()
 
 proc fromForm*[T: tuple](data: StringTableRef | Table[string, string]): T =
@@ -178,8 +109,6 @@ macro kform*(inputs, stmt): untyped =
   var
     htmlForm = newStmtList()
     entries: seq[NimNode]
-
-  # echo treeRepr stmt
 
   for s in stmt:
     echo treeRepr s
@@ -264,7 +193,6 @@ macro kform*(inputs, stmt): untyped =
     newColonExpr(ident"data",
       newCall(ident"default", newTupleDef entries)))
 
-  echo repr result
 
 when isMainModule:
   let
