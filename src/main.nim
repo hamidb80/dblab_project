@@ -39,34 +39,34 @@ func wrapForm*(action: string, child: VNode, `method` = "POST"): VNode =
 
 let
   loginForm = kform ():
-    uname as "user name": input string = ""
-    pass as "password": input Secret = "" # Password
-    submit "login"
+    uname as "user name": input string = "" {.icon: "user".}
+    pass as "password": input Secret = "" {.icon: "lock".}
+    submit "login" {.icon: "certificate".}
 
   airCompanyForm = kform (id: int, cname: string):
     id as "id": hidden int = id
-    name as "name": input string = cname
+    name as "name": input string = cname {.icon: "font".}
     submit "add"
 
   airPlaneForm = kform (aircompany_id: int, cap: int):
-    model as "model": input string = ""
-    cap as "capacity": input int = cap    # Positive
+    model as "model": input string = "" {.icon: "plane".}
+    cap as "capacity": input int = cap {.icon: "users".}
     company as "company": hidden int = aircompany_id
     submit "add"
 
   travelForm = kform (aircompany_id: int, airplane_id: int):
     company as "company": hidden int = aircompany_id
     airplane as "airplane": hidden int = airplane_id
-    pilot as "pilot": input string = ""
-    takeoff as "take off time": input DateTime = ""
-    destination as "destination": input string = ""
-    submit "add"
+    pilot as "pilot": input string = "" {.icon: "fa-graduation-cap".}
+    takeoff as "take off time": input DateTime = "" {.icon: "clock-o".}
+    destination as "destination": input string = "" {.icon: "road".}
+    submit "add" {.icon: "plus".}
 
   buyTicketForm = kform (airplane_id: int, options: seq[int]):
     seat as "seat number": select[options]int = options[0]
     icode as "international code": input string = ""
     airplane as "airplane": hidden int = airplane_id
-    submit "buy"
+    submit "buy" {.icon: "money".}
 
 
 when isMainModule:
@@ -80,12 +80,45 @@ when isMainModule:
 template parseForm(form): untyped {.dirty.} =
   fromForm[form.data.type](request.params)
 
+func ticketsTable(): VNode =
+  let tks = getTickets()
+
+  buldHtml:
+    table(class = "table table-hover"):
+      thead:
+        tr:
+          th(scope = "col"):
+            text "Type"
+          th(scope = "col"):
+            text "Column heading"
+
+      tbody:
+        for t in tks:
+          tr(class = "table-active"):
+            td:
+              text "Column content"
+
+            text "Morbi leo risus"
+            text "dest: "
+            text "bill: "
+            text "time: "
+            span(class = "badge bg-primary rounded-pill"):
+              text "free"
+
+
+func buyTicket(): VNode =
+  buildHtml tdiv()
+
+
 when isMainModule:
   initDB()
 
   routes:
     get "/":
-      resp $page("index", wrapForm("/login", loginForm.toVNode()))
+      resp $page("tickets", ticketsPage())
+
+    get "/login":
+      resp $page("login", wrapForm("/login", loginForm.toVNode()))
 
     post "/login":
       let t = parseForm loginForm

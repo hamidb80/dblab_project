@@ -100,7 +100,7 @@ func conv(a: string, dest: type string): string = a
 func conv(a: string, dest: type float): float = parseFloat a
 
 # TODO https://nim-lang.org/docs/times.html
-proc conv(a: string, dest: type DateTime): DateTime = now() 
+proc conv(a: string, dest: type DateTime): DateTime = now()
 
 proc fromForm*[T: tuple](data: StringTableRef | Table[string, string]): T =
   for k, v in result.fieldPairs:
@@ -108,36 +108,69 @@ proc fromForm*[T: tuple](data: StringTableRef | Table[string, string]): T =
 
 # ---
 
+func icon*(name: string, themed = true): Vnode =
+  buildHTML bold(class = (if themed: "text-primary " else: "") & "fa fa-" & name)
+
+func label2*(text, iconName: string): VNode =
+  buildHTML:
+    tdiv(class = "d-flex justify-content-between align-items-center"):
+      label:
+        text `text`
+      icon `iconName`
+
 func toHiddenInput(formName: string, defaultValue: NimNode): NimNode =
   quote:
     input(name = `formName`, type = "hidden", value = $`defaultValue`)
 
+
+func findfn[T](s: seq[T], p: T -> bool): Option[T] =
+  for i in s:
+    if p(i):
+      return some i
+
+func isIconPragma(n: NimNode): bool =
+  n.kind == nnkExprColonExpr and n[0].eqident "icon"
+
+func iconName(pragmas: seq[NimNode]): string =
+  let t = pragmas.findfn(isIconPragma)
+
+  if issome t: t.get[1].strval
+  else: ""
+
+
 func toInput(formName, formLabel: string, inputtype,
-    defaultValue: NimNode): NimNode =
+    defaultValue: NimNode, pragmas: seq[NimNode]): NimNode =
+
+  let iconName = pragmas.iconName
+
   quote:
     tdiv:
-      label:
-        text `formLabel`
+      label2(`formLabel`, `iconName`)
 
       input(name = `formName`, class = "form-control", type = `inputtype`,
           value = $`defaultValue`)
 
 func toSelect(formName, formLabel: string, defaultValue: NimNode,
-    options: NimNode): NimNode =
+    options: NimNode, pragmas: seq[NimNode]): NimNode =
+
+  let iconName = pragmas.iconName
+
   quote:
     tdiv:
-      label:
-        text `formLabel`
+      label2(`formLabel`, `iconName`)
 
       select(name = `formName`, class = "form-control",
           value = $`defaultValue`):
         for o in `options`:
           option(value = $o)
 
-func vbtn(content: string): NimNode =
+func vbtn(content: string, pragmas: seq[NimNode]): NimNode =
+  let iconName = pragmas.iconName
   quote:
     button(class = "w-100 btn btn-primary mt-4"):
       text `content`
+      text " "
+      icon `iconName`, false
 
 # ---
 
@@ -164,10 +197,10 @@ macro kform*(inputs, stmt): untyped =
         expectKind action[AsgnLeftSide], nnkCommand
 
         let
-          value = action[AsgnRightSide]
           spec = action[AsgnLeftSide]
           dataType = spec[CommandArgs[0]]
           dataTypeResolved = newcall(ident"nimtype", dataType)
+
           (elem, index) = block:
             let t = spec.callee
             case t.kind
@@ -175,12 +208,21 @@ macro kform*(inputs, stmt): untyped =
             of nnkBracketExpr: (t[0].strVal, t[1])
             else: raisee(ValueError, "invalid element")
 
+          (value, pragmas) = block:
+            let t = action[AsgnRightSide]
+            case t.kind
+            of nnkPragmaExpr:
+              (t[0], t[1].toseq)
+            else:
+              (t, @[])
+
           vnode =
             case elem:
             of "input":
               entries.add newIdentDefs(key, dataTypeResolved)
-              toInput(key.strVal, label.strval, newcall(ident"htmltype",
-                  dataType), value)
+              toInput(key.strVal, label.strval,
+                newcall(ident"htmltype", dataType),
+                value, pragmas)
 
             of "hidden":
               entries.add newIdentDefs(key, dataTypeResolved)
@@ -188,7 +230,7 @@ macro kform*(inputs, stmt): untyped =
 
             of "select":
               entries.add newIdentDefs(key, dataTypeResolved)
-              toSelect(key.strVal, label.strval, value, index)
+              toSelect(key.strVal, label.strval, value, index, pragmas)
 
             else: raisee ValueError, "invalid form entity"
 
@@ -200,11 +242,15 @@ macro kform*(inputs, stmt): untyped =
     of nnkCommand:
       let
         name = s[CommandIdent].strval
-        label = s[CommandArgs[0]].strval
+        (label, pragmas) = block:
+          let t = s[CommandArgs[0]]
+          case t.kind
+          of nnkPragmaExpr: (t[0].strval, t[1].toseq)
+          else: (t.strVal, @[])
 
       case name
       of "submit":
-        htmlForm.add vbtn(label)
+        htmlForm.add vbtn(label, pragmas)
       else:
         raisee(ValueError, fmt"invalid command {name}")
 
