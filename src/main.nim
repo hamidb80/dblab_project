@@ -3,7 +3,7 @@ import kform
 
 
 
-func wrap(pageTitle: string, page: VNode): VNode =
+func page(title: string, page: VNode): VNode =
   const cssFiles = @[
     "https://bootswatch.com/5/litera/bootstrap.min.css",
     "https://use.fontawesome.com/releases/v5.7.0/css/all.css",
@@ -17,10 +17,10 @@ func wrap(pageTitle: string, page: VNode): VNode =
         meta(name = "viewport", content = "width=device-width, initial-scale=1.0")
 
         title:
-          text pageTitle
+          text title
 
         link(rel = "icon", type = "image/x-icon", href = "/assets/icon.png")
-        script(src = "/assets/page.js", `defer` = "true")
+        # script(src = "/assets/page.js", `defer` = "true")
 
         for path in cssFiles:
           link(rel = "stylesheet", href = path)
@@ -38,33 +38,38 @@ func wrapForm*(action: string, child: VNode): VNode =
 
 let
   loginForm = kform ():
-    uname as "user name": input string
-    pass as "password": input Password
+    uname as "user name": input string = ""
+    pass as "password": input string = "" # Password
     submit "login"
 
-  airCompanyForm = kform ():
-    name: input string
+  airCompanyForm = kform (id: int, cname: string):
+    id as "id": hidden int = id
+    name as "name": input string = cname
     submit "add"
 
-  airPlaneForm = kform (aircompany_id: int):
-    model: input string
-    capacity: input Positive
-    company: hidden int = aircompany_id
+  airPlaneForm = kform (aircompany_id: int, cap: int):
+    model as "model": input string = ""
+    cap as "capacity": input int = cap    # Positive
+    company as "company": hidden int = aircompany_id
     submit "add"
 
-  travelForm = kform (aircompany_id, airplane_id: int):
-    company: hidden int = aircompany_id
-    airplane: hidden int = airplane_id
-    pilot: input string
-    destination: input string
+  travelForm = kform (aircompany_id: int, airplane_id: int):
+    company as "company": hidden int = aircompany_id
+    airplane as "airplane": hidden int = airplane_id
+    pilot as "pilot": input string = ""
+    destination as "destination": input string = ""
     submit "add"
 
   buyTicketForm = kform (airplane_id: int, options: seq[int]):
-    seat: select int = options
-    icode as "international code": input string
-    airplane: hidden int = airplane_id
+    seat as "seat number": select[options]int = options[0]
+    icode as "international code": input string = ""
+    airplane as "airplane": hidden int = airplane_id
     submit "buy"
 
 
 when isMainModule:
-  discard
+  echo loginForm.toVNode()
+  echo airCompanyForm.toVNode(1, "ww")
+  echo airPlaneForm.toVNode(1, 10)
+  echo travelForm.toVNode(10, 2)
+  echo buyTicketForm.toVNode(10, @[1, 2, 3])

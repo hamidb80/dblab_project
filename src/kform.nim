@@ -1,4 +1,4 @@
-import std/[macros, strformat, options, strtabs, strutils]
+import std/[macros, strformat, options, strtabs, strutils, sequtils, sugar]
 import karax/[karaxdsl, vdom], jester
 import macroplus
 
@@ -8,6 +8,21 @@ import macroplus
 ##     inititializer: proc
 ##     parser: proc
 ##
+
+# type
+#   Form = object
+#     fields: seq[FormField]
+
+#   FormField = object
+#     kind: FormFieldKind
+#     name: string
+#     features
+
+#   FormFieldKind = enum
+#     ffkInput
+#     ffkHidden
+#     ffkSelect
+
 
 # --- meta
 
@@ -85,23 +100,46 @@ proc fromForm[T](data: StringTableRef): T =
 
       # ---
 
-func toInput(formName, formLabel: string): VNode =
-  buildHtml tdiv:
-    label:
-      text formLabel
 
-    input(name = formName, className = "form-control")
+func toHiddenInput(formName: string, defaultValue: NimNode): NimNode =
+  quote:
+    input(name = `formName`, type = "hidden", value = $`defaultValue`)
 
-func vbtn(content: string): VNode =
-  buildHtml button(className = "w-100"):
-    text content
+func toInput(formName, formLabel: string, defaultValue: NimNode): NimNode =
+  quote:
+    tdiv:
+      label:
+        text `formLabel`
+
+      input(name = `formName`, class = "form-control",
+          value = $`defaultValue`)
+
+func toSelect(formName, formLabel: string, defaultValue: NimNode,
+    options: NimNode): NimNode =
+  quote:
+    tdiv:
+      label:
+        text `formLabel`
+
+      select(name = `formName`, class = "form-control",
+          value = $`defaultValue`):
+        for o in `options`:
+          option(value = $o)
+
+
+func vbtn(content: string): NimNode =
+  quote:
+    button(class = "w-100"):
+      text `content`
 
 # ---
 
-macro kform*(options, stmt): untyped =
+macro kform*(inputs, stmt): untyped =
   var
-    htmlForm = buildHtml tdiv()
+    htmlForm = newStmtList()
     entries: seq[NimNode]
+
+  # echo treeRepr stmt
 
   for s in stmt:
     echo treeRepr s
@@ -115,18 +153,34 @@ macro kform*(options, stmt): untyped =
         action = s[InfixBody][0]
 
       case action.kind
-      of nnkCommand:
-        let
-          elemenet = action.callee.strVal
-          `type` = action[CommandArgs[0]]
-          vnode =
-            case elemenet:
-            of "input":
-              entries.add newIdentDefs(key, `type`)
-              toInput(key.strVal, label.strval)
+      of nnkAsgn:
+        expectKind action[AsgnLeftSide], nnkCommand
 
-            # of "hidden": discard
-            # of "select": discard
+        let
+          value = action[AsgnRightSide]
+          spec = action[AsgnLeftSide]
+          dataType = spec[CommandArgs[0]]
+          (elem, index) = block:
+            let t = spec.callee
+            case t.kind
+            of nnkIdent: (t.strVal, newlit -1)
+            of nnkBracketExpr: (t[0].strVal, t[1])
+            else: raisee(ValueError, "invalid element")
+
+          vnode =
+            case elem:
+            of "input":
+              entries.add newIdentDefs(key, dataType)
+              toInput(key.strVal, label.strval, value)
+
+            of "hidden":
+              entries.add newIdentDefs(key, dataType)
+              toHiddenInput(key.strVal, value)
+
+            of "select":
+              entries.add newIdentDefs(key, dataType)
+              toSelect(key.strVal, label.strval, value, index)
+
             else: raisee ValueError, "invalid form entity"
 
         htmlForm.add vnode
@@ -148,31 +202,21 @@ macro kform*(options, stmt): untyped =
     else:
       raisee(ValueError, fmt"invalid node kind {s.kind} in main body")
 
-  newTree(nnkTupleConstr,
-    newColonExpr(ident"html", newlit $htmlForm),
-    newColonExpr(ident"dataStructure", 
-    newCall(ident"default", newTupleDef entries)))
+  result = newTree(nnkTupleConstr,
+    newColonExpr(ident"toVNode", newproc(
+      params = @[ident"VNode"] & inputs.toseq.map(n => newIdentDefs(n[0], n[1])),
+      body = newCall(ident"buildHTML", ident"tdiv", htmlform))),
+    newColonExpr(ident"dataStructure",
+      newCall(ident"default", newTupleDef entries)))
 
-
-let 
-  ff = kform ():
-    uname as "user name": input string
-    pass as "password": input string
-    submit "login"
-
-
-# --- verbatim <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  echo repr result
 
 when isMainModule:
-  echo ff.html
-  # let st = newStringTable {
-  #   "name": "1",
-  #   "value": "2"}
+  let
+    ff = kform (du: string):
+      uname as "user name": input string = du
+      pass as "password": input string = ""
+      submit "login"
 
-  # echo st
-
-  # type Obj = object
-  #   name: string
-  #   value: int
-
-  # echo fromForm[Obj](st)
+  echo ff.toVNode("hey")
+  echo ff.dataStructure.type
