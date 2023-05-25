@@ -1,4 +1,4 @@
-import std/[json, strtabs]
+import std/[json, strtabs, times]
 import jester, karax/[karaxdsl, vdom]
 import kform, db
 
@@ -58,6 +58,7 @@ let
     company as "company": hidden int = aircompany_id
     airplane as "airplane": hidden int = airplane_id
     pilot as "pilot": input string = ""
+    takeoff as "take off time": input DateTime = ""
     destination as "destination": input string = ""
     submit "add"
 

@@ -98,7 +98,9 @@ template nimtype*(T: type DateTime): untyped = DateTime
 func conv(a: string, dest: type int): int = parseInt a
 func conv(a: string, dest: type string): string = a
 func conv(a: string, dest: type float): float = parseFloat a
-func conv(a: string, dest: type DateTime): float = parse a # TODO https://nim-lang.org/docs/times.html
+
+# TODO https://nim-lang.org/docs/times.html
+proc conv(a: string, dest: type DateTime): DateTime = now() 
 
 proc fromForm*[T: tuple](data: StringTableRef | Table[string, string]): T =
   for k, v in result.fieldPairs:
