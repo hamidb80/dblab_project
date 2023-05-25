@@ -3,6 +3,34 @@ import jester, karax/[karaxdsl, vdom]
 import kform, db
 
 
+func ticketsTable(): VNode =
+  let tks = getTickets()
+
+  buldHtml:
+    table(class = "table table-hover"):
+      thead:
+        tr:
+          th(scope = "col"):
+            text "Type"
+          th(scope = "col"):
+            text "Column heading"
+
+      tbody:
+        for t in tks:
+          tr(class = "table-active"):
+            td:
+              text "Column content"
+
+            text "Morbi leo risus"
+            text "dest: "
+            text "bill: "
+            text "time: "
+            span(class = "badge bg-primary rounded-pill"):
+              text "free"
+
+func buyTicket(): VNode =
+  buildHtml tdiv()
+
 func page(title: string, page: VNode): VNode =
   const cssFiles = @[
     "https://bootswatch.com/5/litera/bootstrap.min.css",
@@ -36,13 +64,7 @@ func wrapForm*(action: string, child: VNode, `method` = "POST"): VNode =
     child
 
 
-
 let
-  loginForm = kform ():
-    uname as "user name": input string = "" {.icon: "user".}
-    pass as "password": input Secret = "" {.icon: "lock".}
-    submit "login" {.icon: "certificate".}
-
   airCompanyForm = kform (id: int, cname: string):
     id as "id": hidden int = id
     name as "name": input string = cname {.icon: "font".}
@@ -68,46 +90,14 @@ let
     airplane as "airplane": hidden int = airplane_id
     submit "buy" {.icon: "money".}
 
-
-when isMainModule:
-  echo loginForm.toVNode()
-  echo airCompanyForm.toVNode(1, "ww")
-  echo airPlaneForm.toVNode(1, 10)
-  echo travelForm.toVNode(10, 2)
-  echo buyTicketForm.toVNode(10, @[1, 2, 3])
+  loginForm = kform ():
+    uname as "user name": input string = "" {.icon: "user".}
+    pass as "password": input Secret = "" {.icon: "lock".}
+    submit "login" {.icon: "certificate".}
 
 
 template parseForm(form): untyped {.dirty.} =
   fromForm[form.data.type](request.params)
-
-func ticketsTable(): VNode =
-  let tks = getTickets()
-
-  buldHtml:
-    table(class = "table table-hover"):
-      thead:
-        tr:
-          th(scope = "col"):
-            text "Type"
-          th(scope = "col"):
-            text "Column heading"
-
-      tbody:
-        for t in tks:
-          tr(class = "table-active"):
-            td:
-              text "Column content"
-
-            text "Morbi leo risus"
-            text "dest: "
-            text "bill: "
-            text "time: "
-            span(class = "badge bg-primary rounded-pill"):
-              text "free"
-
-
-func buyTicket(): VNode =
-  buildHtml tdiv()
 
 
 when isMainModule:
@@ -132,3 +122,5 @@ when isMainModule:
 
     post "/add-company":
       resp %*request.params
+
+
