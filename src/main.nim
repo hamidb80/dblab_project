@@ -1,6 +1,6 @@
+import std/json
 import jester, karax/[karaxdsl, vdom]
-import kform
-
+import kform, db
 
 
 func page(title: string, page: VNode): VNode =
@@ -31,9 +31,10 @@ func page(title: string, page: VNode): VNode =
 
           page
 
-func wrapForm*(action: string, child: VNode): VNode =
-  buildHtml form(`method` = "POST", action = action):
+func wrapForm*(action: string, child: VNode, `method` = "POST"): VNode =
+  buildHtml form(`method` = `method`, action = action):
     child
+
 
 
 let
@@ -73,3 +74,26 @@ when isMainModule:
   echo airPlaneForm.toVNode(1, 10)
   echo travelForm.toVNode(10, 2)
   echo buyTicketForm.toVNode(10, @[1, 2, 3])
+
+
+
+
+when isMainModule:
+  initDB()
+
+
+  routes:
+    get "/":
+      resp $page("index", wrapForm("/login", loginForm.toVNode()))
+
+    post "/login":
+      resp %*request.params
+
+    get "/companies":
+      resp %*getAllAirCompanies()
+
+    get "/add-company":
+      resp $page("index", wrapForm("", airCompanyForm.toVNode(-1, "")))
+
+    post "/add-company":
+      resp %*request.params

@@ -87,19 +87,11 @@ func conv(a: string, dest: type int): int = parseInt a
 func conv(a: string, dest: type string): string = a
 func conv(a: string, dest: type float): float = parseFloat a
 
-proc fromForm[T](data: StringTableRef): T =
+proc fromForm*[T](data: StringTableRef): T =
   for k, v in result.fieldPairs:
     v = conv(data[k], v.type)
-      # when v.type is Option:
-      #   if k in data:
-      #     conv data[k], v.type
-      #   else:
-      #     none v.type
-      # else:
-        # conv data[k], v.type
 
-      # ---
-
+# ---
 
 func toHiddenInput(formName: string, defaultValue: NimNode): NimNode =
   quote:
@@ -125,7 +117,6 @@ func toSelect(formName, formLabel: string, defaultValue: NimNode,
           value = $`defaultValue`):
         for o in `options`:
           option(value = $o)
-
 
 func vbtn(content: string): NimNode =
   quote:
