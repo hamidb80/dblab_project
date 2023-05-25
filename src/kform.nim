@@ -1,4 +1,4 @@
-import std/[macros, strformat, options, strtabs]
+import std/[macros, strformat, options, strtabs, strutils]
 import karax/[karaxdsl, vdom], jester
 import macroplus
 
@@ -9,6 +9,7 @@ import macroplus
 ##     parser: proc
 ##
 
+# --- meta
 
 template getAssert(node: NimNode, k: NimNodeKind, pattern: NimNode): untyped =
   if node.kind == k:
@@ -38,17 +39,6 @@ func replaceIdent(what, sub, repl: NimNode): NimNode =
       result.add replaceIdent(n, sub, repl)
 
 
-func toInput(formName, formLabel: string): VNode =
-  buildHtml tdiv:
-    label:
-      text formLabel
-
-    input(name = formName, className = "form-control")
-
-func vbtn(content: string): VNode =
-  buildHtml button(className = "w-100"):
-    text content
-
 func callee(n: NimNode): NimNode =
   expectKind n, {nnkCommand, nnkCall}
   n[CallIdent]
@@ -61,7 +51,7 @@ func newTypeSection(typedef: NimNode): NimNode =
 
 func newTypeDef(obj: NimNode, name: string): NimNode =
   newTree(nnkTypeDef,
-    ident name,
+    exported ident name,
     emp,
     obj)
 
@@ -71,19 +61,46 @@ func newObjectDef(identDefs: seq[NimNode]): NimNode =
     emp,
     newNimNode(nnkRecList).add identDefs)
 
+func newTupleDef(identDefs: seq[NimNode]): NimNode =
+  newTree(nnkTupleTy).add identDefs
 
-template `?`(T: typedesc): untyped =
-  Option[T]
+# ---
 
+template `?`(T: typedesc): untyped = Option[T]
 
-proc fromForm[T](data: StringTableRef): T = 
+func conv(a: string, dest: type int): int = parseInt a
+func conv(a: string, dest: type string): string = a
+func conv(a: string, dest: type float): float = parseFloat a
+
+proc fromForm[T](data: StringTableRef): T =
   for k, v in result.fieldPairs:
-    echo k, " <--", v.hasCus
+    v = conv(data[k], v.type)
+      # when v.type is Option:
+      #   if k in data:
+      #     conv data[k], v.type
+      #   else:
+      #     none v.type
+      # else:
+        # conv data[k], v.type
 
+      # ---
+
+func toInput(formName, formLabel: string): VNode =
+  buildHtml tdiv:
+    label:
+      text formLabel
+
+    input(name = formName, className = "form-control")
+
+func vbtn(content: string): VNode =
+  buildHtml button(className = "w-100"):
+    text content
+
+# ---
 
 macro kform*(options, stmt): untyped =
   var
-    htmlForm = ""
+    htmlForm = buildHtml tdiv()
     entries: seq[NimNode]
 
   for s in stmt:
@@ -112,7 +129,7 @@ macro kform*(options, stmt): untyped =
             # of "select": discard
             else: raisee ValueError, "invalid form entity"
 
-        htmlForm &= $vnode
+        htmlForm.add vnode
 
       else:
         raisee ValueError, "invalid node kind, expected nnkCommand"
@@ -124,32 +141,38 @@ macro kform*(options, stmt): untyped =
 
       case name
       of "submit":
-        htmlForm &= vbtn(label)
+        htmlForm.add vbtn(label)
       else:
         raisee(ValueError, fmt"invalid command {name}")
 
-    else: raisee(ValueError, fmt"invalid node kind {s.kind} in main body")
+    else:
+      raisee(ValueError, fmt"invalid node kind {s.kind} in main body")
 
-  echo "-------------------------"
-  echo htmlForm
-  echo repr newTypeSection newTypeDef(newObjectDef entries, "randomType")
+  newTree(nnkTupleConstr,
+    newColonExpr(ident"html", newlit $htmlForm),
+    newColonExpr(ident"dataStructure", 
+    newCall(ident"default", newTupleDef entries)))
 
-kform ():
-  uname as "user name": input string
-  pass as "password": input Password
-  submit "login"
 
+let 
+  ff = kform ():
+    uname as "user name": input string
+    pass as "password": input string
+    submit "login"
+
+
+# --- verbatim <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 when isMainModule:
+  echo ff.html
+  # let st = newStringTable {
+  #   "name": "1",
+  #   "value": "2"}
 
-  let st = newStringTable {
-    "name": "1",
-    "value":" 2"
-  }
+  # echo st
 
-  echo st
+  # type Obj = object
+  #   name: string
+  #   value: int
 
-  type Obj = object 
-    name: string
-
-  echo fromForm[Obj](st)
+  # echo fromForm[Obj](st)
