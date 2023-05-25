@@ -1,2 +1,4 @@
 *.exe
 play.*
+db.*
+*.sqlite3
