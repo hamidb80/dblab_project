@@ -1,3 +1,4 @@
+import std/times
 import karax/[karaxdsl, vdom]
 import dbm
 
@@ -55,21 +56,19 @@ func flysTable*(tks: seq[auto]): VNode =
     table(class = "table table-hover"):
       thead:
         tr:
-          th(scope = "col"):
-            text "destination"
-      
-          th(scope = "col"):
-            text "Column heading"
+          for name in ["مبدا", "مقصد", "شرکت", "پرواز",
+              "باقی مانده"]:
+            th(scope = "col"):
+              text name
 
       tbody:
-        for t in tks:
-          tr(class = "table-active"):
-            td:
-              text "Column content"
-
-            td:
-              text "Morbi leo risus"
-      
+        for i, t in tks:
+          tr(class = (if i mod 2 == 0: "table-active" else: "")):
+            td: text t.origin
+            td: text t.dest
+            td: text t.company
+            td: text $t.takeoff
+            td: text $t.left
 
 func ticketsPage*(tks: seq[Ticket]): VNode =
   buildHtml tdiv()

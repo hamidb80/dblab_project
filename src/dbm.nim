@@ -32,7 +32,7 @@ type
     id* {.primary, autoIncrement.}: ID
     pilot*: string
     airplane_id* {.references: Airplane.id.}: ID
-    origin_id* {.references: Airport.id.}: ID # TODO add in datagen
+    origin_id* {.references: Airport.id.}: ID
     destination_id* {.references: Airport.id.}: ID
     takeoff*: DateTime
 
@@ -69,10 +69,11 @@ proc addCompany*(name: string): ID =
 proc addAirplane*(model: string, cap: int, company: ID): ID =
   db.insertID Airplane(model: model, company_id: company, capacity: cap)
 
-proc addFly*(aid: ID, pilot: string, dest: ID, t = now()): ID =
+proc addFly*(aid: ID, pilot: string, org, dest: ID, t: DateTime): ID =
   result = db.insertID Fly(
     airplane_id: aid,
     pilot: pilot,
+    origin_id: org,
     destination_id: dest,
     takeoff: t)
 
@@ -80,7 +81,7 @@ proc addFly*(aid: ID, pilot: string, dest: ID, t = now()): ID =
 
   let s = db
   s.exec sql"BEGIN"
-  
+
   for i in 1..ap.capacity:
     s.exec sql"INSERT INTO Ticket (fly_id, seat) VALUES (?, ?)", result, i
 
@@ -91,32 +92,39 @@ proc addFly*(aid: ID, pilot: string, dest: ID, t = now()): ID =
 proc getAllAirCompanies*: auto =
   db.find(seq[Company])
 
-proc getActiveTickets*: auto =
-  db.find(seq[tuple[id: int, airport, city, country, company, airplane: string, left: int]],
+# TODO add filter by destination/origin/time
+proc getActiveFlys*: auto =
+  db.find(seq[tuple[id: int, origin, dest, company: string,
+      takeoff: string, left: int]], 
     sql"""
-    SELECT f.id, p.name, ct.name, cn.name, cp.name, ap.model, COUNT(f.id)
-    FROM Fly f
+    SELECT 
+      f.id,
+      ( cto.name ||  ', ' || cno.name ) origin_address,
+      ( ctd.name ||  ', ' || cnd.name ) dest_address, 
+      cp.name, f.takeoff, t.c
+    FROM 
+      Fly f
     
-    JOIN Airport p
-    ON p.id = f.destination_id
+    JOIN Airport po ON po.id = f.origin_id
+    JOIN City cto ON po.city_id = cto.id
+    JOIN Country cno ON cno.id = cto.country_id
 
-    JOIN City ct
-    ON p.city_id = ct.id
+    JOIN Airport pd ON pd.id = f.destination_id
+    JOIN City ctd ON pd.city_id = ctd.id
+    JOIN Country cnd ON cnd.id = ctd.country_id
 
-    JOIN Country cn
-    ON cn.id = ct.country_id
+    JOIN Airplane ap ON ap.id = f.airplane_id
+    JOIN Company cp ON ap.company_id = cp.id
 
-    JOIN Airplane ap
-    ON ap.id = f.airplane_id
-
-    JOIN Company cp
-    ON ap.company_id = cp.id
-
-    JOIN Ticket t
-    ON 
+    JOIN (
+      SELECT t.fly_id, t.reserved_by, COUNT(1) c
+      FROM Ticket t
+      GROUP BY t.fly_id
+    ) t
+    ON  
       t.fly_id = f.id AND
       t.reserved_by IS NULL
-    GROUP BY t.fly_id
 
-    -- WHERE timediff(f.takeoff, now()) < hours(1)
+    WHERE unixepoch(f.takeoff) - unixepoch('now') > 60 * 60 * 1
+    ORDER BY f.takeoff DESC
   """)

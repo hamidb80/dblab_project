@@ -1,0 +1,1 @@
+copy new sqlite `dll` from its website and name it `sqlite3_64.dll`

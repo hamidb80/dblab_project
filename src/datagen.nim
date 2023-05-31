@@ -1,52 +1,52 @@
-import std/[random, db_sqlite, strutils, sequtils, sugar]
+import std/[random, sugar, times]
 import dbm
 
 let
   companies = @[
-    "Mahan Air",
-    "Kish Air",
-    "Iran Air"]
+    "آتا",
+    "ماهان",
+    "ایران ایر"]
 
   airplanes: seq[tuple[model: string, capacity: int]] = @[
     ("Boeing 707", 137),
-    ("Boeing 777", 368),
     ("Boeing 727", 106),
-    ("Airbus A321", 185),
-    ("Airbus A380", 525),
     ("Embraer Lineage 1000E", 19)]
 
   pilots = @[
-    "Amelia Earhart",
-    "Baron Manfred Von Richthoven",
-    "General James H",
-    "Noel Wien",
-    "Chesley Sully Sullenberger",
-    "General Charles E. Yeager",
-    "Erich Hartmann",
-    "Robert A. Hoover"]
+    "فریدون ذوالفقاری",
+    "محمود اسکندری",
+    "علیرضا یاسینی",
+    "جلیل زندی",
+    "منوچهر محققی",
+    "حسین خلعتبری",
+    "عباس بابایی",
+    "علی اکبر شیرودی"]
 
   locations = {
-    "Iran": @{
-      "Tehran": @["Imam Khomeini", "Mehr Abad"],
-      "Tabas": @["Tabas"],
-      "Mashhad": @["Shahid Hashemi Nejad"],
-      "Abadan": @["Ayat-Allah Jami"],
-      "Zanjan": @["Shohadaye Zanjan"],
-      "Gorgan": @["Gorgran AirPort"],
-      "Khoram Abad": @["Shohadye Khoram Abad"],
-      "Qom": @["Kooshk Nosrat"],
-      "Yazd": @["Shahid Sadooghi"],
-      "Hormozgan": @["Kish", "Qeshm", "Aboo Mosa"],
+    "ایران": @{
+      "تهران": @[" فروگاه امام خمینی",
+          "فرودگاه مهرآباد"],
+      "طبس": @["طبس"],
+      "مشهد": @["فرودگاه شهید هاشمی نژاد"],
+      "آبادان": @["فرودگاه آیت الله جمی"],
+      "زنجان": @["فرودگاه شهدای زنجان"],
+      "گرگان": @["فرودگان گرگان"],
+      "خرم آباد": @["فرودگاه شهدای خرم آباد"],
+      "قم": @["فرودگاه کوشک نصرت"],
+      "یزد": @["فرودگاه شهید صدوقی"],
+      "هرمزگان": @["فرودگاه کیش", "فرودگاه قسم",
+          "فرودگاه ابوموسی"],
     },
 
-    "Turkey": @{
-      "Antalia": @["Antalia Airport"],
-      "Estambok": @["Atatork", "Gookchen", "New Estambool"],
+    "ترکیه": @{
+      "آنتالیا": @["فرودگاه آنتالیا"],
+      "استامبول": @["فرودگاه آتاتورک",
+          "فرودگاه جدید استامبول"],
     },
 
-    "Iraq": @{
-      "Najaf": @["Najaf Airport"],
-      "Baghdad": @["Mootana"],
+    "عرق": @{
+      "نجف": @["فروگاه نجق"],
+      "بغداد": @["فرودگاه موتانا"],
     }
   }
 
@@ -73,6 +73,11 @@ when isMainModule:
         for i in 1..rand(1..20):
           let airplane = sample airplanes
           addAirplane(airplane.model, airplane.capacity, ci)
-  
+
     for i in 1..rand(1..30):
-      discard addFly(sample vs, sample pilots, sample airports_ids)
+      let
+        o = sample airports_ids
+        d = sample airports_ids
+        t = now() + initDuration(minutes = rand(1..1000))
+
+      discard addFly(sample vs, sample pilots, o, d, t)

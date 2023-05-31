@@ -2,3 +2,5 @@
 play.*
 db.*
 *.sqlite3
+*.dll
+*.def
