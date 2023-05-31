@@ -16,8 +16,7 @@ when isMainModule:
       sendfile s
 
     get "/":
-      echo getActiveTickets()
-      resp $page("tickets", ticketsPage(@[]))
+      resp $page("tickets", ticketsPage(getActiveTickets()))
 
     get "/login":
       resp $page("login", wrapForm("/login", loginForm.toVNode()))

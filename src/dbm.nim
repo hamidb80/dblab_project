@@ -1,43 +1,46 @@
-import std/[times]
+import std/[times, options]
 import ponairi
 
-
 type
+  ID* = int64
+
   Country* = object
-    id* {.primary, autoIncrement.}: int64
+    id* {.primary, autoIncrement.}: ID
     name* {.uniqueIndex.}: string
 
   City* = object
-    id* {.primary, autoIncrement.}: int64
-    country_id* {.references: Country.id.}: int64
+    id* {.primary, autoIncrement.}: ID
+    country_id* {.references: Country.id.}: ID
     name*: string
 
   Airport* = object
-    id* {.primary, autoIncrement.}: int64
-    city_id* {.references: City.id.}: int64
+    id* {.primary, autoIncrement.}: ID
+    city_id* {.references: City.id.}: ID
     name* {.uniqueIndex.}: string
 
   Company* = object
-    id* {.primary, autoIncrement.}: int64
+    id* {.primary, autoIncrement.}: ID
     name* {.uniqueIndex.}: string
 
   Airplane* = object
-    id* {.primary, autoIncrement.}: int64
-    company_id* {.references: Company.id.}: int64
+    id* {.primary, autoIncrement.}: ID
+    company_id* {.references: Company.id.}: ID
     model*: string
     capacity*: Positive
 
   Fly* = object
-    id* {.primary, autoIncrement.}: int64
-    airplane_id* {.references: Airplane.id.}: int64
+    id* {.primary, autoIncrement.}: ID
     pilot*: string
-    destination_id* {.references: Airport.id.}: int64
+    airplane_id* {.references: Airplane.id.}: ID
+    origin_id* {.references: Airport.id.}: ID # TODO add in datagen
+    destination_id* {.references: Airport.id.}: ID
     takeoff*: DateTime
 
   Ticket* = object
-    id* {.primary, autoIncrement.}: int64
-    fly_id* {.references: Fly.id.}: int64
+    id* {.primary, autoIncrement.}: ID
+    fly_id* {.references: Fly.id.}: ID
     seat*: Positive
+    reserved_by*: Option[int]
 
 # ---
 
@@ -51,28 +54,47 @@ proc initDB* =
 
 # ---
 
-proc addCountry*(name: string): int64 =
+proc addCountry*(name: string): ID =
   db.insertID Country(name: name)
 
-proc addCity*(country: int64, name: string): int64 =
+proc addCity*(country: ID, name: string): ID =
   db.insertID City(country_id: country, name: name)
 
-proc addAirport*(city: int64, name: string): int64 =
+proc addAirport*(city: ID, name: string): ID =
   db.insertID Airport(city_id: city, name: name)
 
-proc addCompany*(name: string): int64 =
+proc addCompany*(name: string): ID =
   db.insertID Company(name: name)
 
-proc addAirplane*(model: string, cap: int, company: int64): int64 =
+proc addAirplane*(model: string, cap: int, company: ID): ID =
   db.insertID Airplane(model: model, company_id: company, capacity: cap)
 
+proc addFly*(aid: ID, pilot: string, dest: ID, t = now()): ID =
+  result = db.insertID Fly(
+    airplane_id: aid,
+    pilot: pilot,
+    destination_id: dest,
+    takeoff: t)
+
+  let ap = db.find(Airplane, sql"SELECT * FROM Airplane WHERE id = ?", aid)
+
+  let s = db
+  s.exec sql"BEGIN"
+  
+  for i in 1..ap.capacity:
+    s.exec sql"INSERT INTO Ticket (fly_id, seat) VALUES (?, ?)", result, i
+
+  s.exec sql"COMMIT"
+
+  debugEcho "done ", result
 
 proc getAllAirCompanies*: auto =
   db.find(seq[Company])
 
-proc getActiveTickets*: auto = 
-  db.find(seq[tuple[airport, city, country, company: string]], sql"""
-    SELECT p.name, ct.name, cn.name, cp.name
+proc getActiveTickets*: auto =
+  db.find(seq[tuple[id: int, airport, city, country, company, airplane: string, left: int]],
+    sql"""
+    SELECT f.id, p.name, ct.name, cn.name, cp.name, ap.model, COUNT(f.id)
     FROM Fly f
     
     JOIN Airport p
@@ -89,6 +111,12 @@ proc getActiveTickets*: auto =
 
     JOIN Company cp
     ON ap.company_id = cp.id
+
+    JOIN Ticket t
+    ON 
+      t.fly_id = f.id AND
+      t.reserved_by IS NULL
+    GROUP BY t.fly_id
 
     -- WHERE timediff(f.takeoff, now()) < hours(1)
   """)

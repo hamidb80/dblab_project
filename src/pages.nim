@@ -50,6 +50,27 @@ func wrapForm*(action: string, child: VNode, `method` = "POST"): VNode =
   buildHtml form(`method` = `method`, action = action):
     child
 
+func flysTable*(tks: seq[auto]): VNode =
+  buildHtml:
+    table(class = "table table-hover"):
+      thead:
+        tr:
+          th(scope = "col"):
+            text "destination"
+      
+          th(scope = "col"):
+            text "Column heading"
+
+      tbody:
+        for t in tks:
+          tr(class = "table-active"):
+            td:
+              text "Column content"
+
+            td:
+              text "Morbi leo risus"
+      
+
 func ticketsPage*(tks: seq[Ticket]): VNode =
   buildHtml tdiv()
 
