@@ -1,8 +1,16 @@
-import std/[times, options]
-import ponairi
+import std/[times, options, sha1]
+import ponairi, labeledtypes
 
 type
   ID* = int64
+
+  Admin* = object
+    username* {.primary.}: string
+    hashedPass*: string
+
+  AuthCookie* = object
+    cookie* {.primary, uniqueIndex.}: string
+    username* {.references: Admin.username.}: string
 
   Country* = object
     id* {.primary, autoIncrement.}: ID
@@ -50,7 +58,9 @@ template db*: untyped =
   ponairi.open(dbPath, "", "", "")
 
 proc initDB* =
-  db.create(Country, City, Airport, Company, Airplane, Fly, Ticket)
+  db.create(
+    Admin, AuthCookie, 
+    Country, City, Airport, Company, Airplane, Fly, Ticket)
 
 # ---
 
@@ -92,10 +102,42 @@ proc addFly*(aid: ID, pilot: string, org, dest: ID, t: DateTime): ID =
 proc getAllAirCompanies*: auto =
   db.find(seq[Company])
 
+proc allAdmins*: seq[(string,)] = 
+  db.find(
+    seq[tuple[name: string]], 
+    sql"SELECT username FROM Admin")
+
+proc addAdmin*(uname, pass: string) = 
+  discard db.insertID Admin(
+    username: uname, 
+    hashedPass: $secureHash pass)
+
+proc isAdmin*(uname, pass: string): bool = 
+  db.getAllRows(sql"""
+    SELECT 1 
+    FROM Admin
+    WHERE
+      username = ? AND
+      hashedPass = ?
+  """, uname, $secureHash pass).len == 1
+
+proc addCookieFor*(cookie, uname: string) = 
+  discard db.insertID(AuthCookie(username: uname, cookie: cookie))
+
+proc isAuthenticated*(cookie: string): bool = 
+  db.getAllRows(sql"SELECT 1 FROM AuthCookie WHERE cookie = ?", cookie).len != 0
+
+# proc getAdmin*(cookie: string): !(username: string) = 
+#   db.getAllRows(sql"""
+#     SELECT username
+#     FROM AuthCookie
+#     WHERE cookie = ?  
+#   """, cookie)[0][0].s
+
 # TODO add filter by destination/origin/time
 proc getActiveFlys*: auto =
   db.find(seq[tuple[id: int, origin, dest, company: string,
-      takeoff: string, left: int]], 
+      takeoff: string, left: int]],
     sql"""
     SELECT 
       f.id,

@@ -44,7 +44,7 @@ let
           "فرودگاه جدید استامبول"],
     },
 
-    "عرق": @{
+    "عراق": @{
       "نجف": @["فروگاه نجق"],
       "بغداد": @["فرودگاه موتانا"],
     }
@@ -55,6 +55,8 @@ when isMainModule:
   randomize()
   initDB()
 
+  addAdmin("root", "1")
+
   var airports_ids: seq[ID]
 
   for (country, cities) in locations:
@@ -63,8 +65,6 @@ when isMainModule:
       let cii = addCity(coi, city)
       for ap in airports:
         airports_ids.add addAirport(cii, ap)
-
-  # https://stackoverflow.com/questions/2279706/select-random-row-from-a-sqlite-table
 
   for c in companies:
     let

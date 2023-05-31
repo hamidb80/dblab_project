@@ -1,4 +1,4 @@
-import std/[os]
+import std/[os, tables, oids, times]
 import jester, karax/[vdom]
 import dbm, forms, pages, kform
 
@@ -21,10 +21,26 @@ when isMainModule:
     get "/login":
       resp $page("login", wrapForm("/login", loginForm.toVNode()))
 
+    get "/logout":
+      if request.cookies.getOrDefault("AUTH").isAuthenticated:
+        resp "Good"
+      else:
+        resp "No"
+
     post "/login":
+      echo allAdmins()
+
       let t = parseForm loginForm
-      # resp t.uname
-      redirect "/companies"
+      if isAdmin(t.uname, t.pass):
+        let ck = $genOid()
+        addCookieFor(ck, t.uname)
+        setCookie "AUTH", ck, now() + initDuration(hours = 1)
+        redirect "/"
+      else:
+        resp "invalid auth"
+
+    # get "/me":
+
 
     get "/companies":
       resp $page("comapnies", companiesPage getAllAirCompanies())

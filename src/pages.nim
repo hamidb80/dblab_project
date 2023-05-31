@@ -33,13 +33,19 @@ func page*(title: string, page: VNode): VNode =
 
             tdiv(class = "collapse navbar-collapse"):
               ul(class = "navbar-nav me-auto"):
-                li(class = "nav-item"):
-                  a(class = "nav-link active", href = "/companies"):
-                    text "companies"
 
                 li(class = "nav-item"):
                   a(class = "nav-link", href = "/login"):
+                    # TODO
                     text "Login"
+
+                li(class = "nav-item"):
+                  a(class = "nav-link active", href = "/companies"):
+                    text "my tickets"
+
+                li(class = "nav-item"):
+                  a(class = "nav-link active", href = "/companies"):
+                    text "companies"
 
         tdiv(class = "container"):
           header(class = "mb-4"):
@@ -72,29 +78,6 @@ func flysTable*(tks: seq[auto]): VNode =
 
 func ticketsPage*(tks: seq[Ticket]): VNode =
   buildHtml tdiv()
-
-func ticketsTable*(tks: seq[Ticket]): VNode =
-  buildHtml:
-    table(class = "table table-hover"):
-      thead:
-        tr:
-          th(scope = "col"):
-            text "Type"
-          th(scope = "col"):
-            text "Column heading"
-
-      tbody:
-        for t in tks:
-          tr(class = "table-active"):
-            td:
-              text "Column content"
-
-            text "Morbi leo risus"
-            text "dest: "
-            text "bill: "
-            text "time: "
-            span(class = "badge bg-primary rounded-pill"):
-              text "free"
 
 func buyTicket*(): VNode =
   buildHtml tdiv()
