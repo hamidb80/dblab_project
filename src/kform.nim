@@ -1,7 +1,7 @@
 import std/[macros, strformat, options, strtabs, strutils, sequtils, sugar, times]
 import karax/[karaxdsl, vdom], jester
 import macroplus
-import utils
+import utils, ui
 
 # --- meta
 
@@ -39,20 +39,9 @@ proc fromForm*[T: tuple](data: StringTableRef | Table[string, string]): T =
 
 # ---
 
-func icon*(name: string, themed = true): Vnode =
-  buildHTML bold(class = (if themed: "text-primary " else: "") & "fa fa-" & name)
-
-func label2*(text, iconName: string): VNode =
-  buildHTML:
-    tdiv(class = "d-flex justify-content-between align-items-center"):
-      label:
-        text `text`
-      icon `iconName`
-
 func toHiddenInput(formName: string, defaultValue: NimNode): NimNode =
   quote:
     input(name = `formName`, type = "hidden", value = $`defaultValue`)
-
 
 func findfn[T](s: seq[T], p: T -> bool): Option[T] =
   for i in s:
@@ -111,7 +100,7 @@ macro kform*(inputs, stmt): untyped =
     entries: seq[NimNode]
 
   for s in stmt:
-    echo treeRepr s
+    # echo treeRepr s
 
     case s.kind
     of nnkInfix:
