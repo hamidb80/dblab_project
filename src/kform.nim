@@ -81,8 +81,10 @@ func toSelect(formName, formLabel: string, defaultValue: NimNode,
 
       select(name = `formName`, class = "form-control",
           value = $`defaultValue`):
-        for o in `options`:
-          option(value = $o)
+        
+        for (value, name) in `options`:
+          option(value = $value):
+            text $name
 
 func vbtn(content: string, pragmas: seq[NimNode]): NimNode =
   let iconName = pragmas.iconName
@@ -90,7 +92,7 @@ func vbtn(content: string, pragmas: seq[NimNode]): NimNode =
     button(class = "w-100 btn btn-primary mt-4"):
       text `content`
       text " "
-      icon `iconName`, false
+      icon `iconName`
 
 # ---
 

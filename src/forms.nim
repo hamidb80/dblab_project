@@ -22,14 +22,13 @@ let
     destination as "destination": input string = "" {.icon: "road".}
     submit "add" {.icon: "plus".}
 
-  buyTicketForm* = kform (airplane_id: int, options: seq[int]):
-    seat as "seat number": select[options]int = options[0]
+  buyTicketForm* = kform (fly_id: int, options: seq[(int, int)]):
+    ticket_id as "seat number": select[options]int = options[0]
     icode as "international code": input string = ""
-    airplane as "airplane": hidden int = airplane_id
-    submit "buy" {.icon: "money".}
+    fly_id as "": hidden int = fly_id
+    submit "buy" {.icon: "credit-card".}
 
   loginForm* = kform ():
     uname as "user name": input string = "" {.icon: "user".}
     pass as "password": input Secret = "" {.icon: "lock".}
     submit "login" {.icon: "certificate".}
-

@@ -80,4 +80,4 @@ when isMainModule:
         d = sample airports_ids
         t = now() + initDuration(minutes = rand(1..1000))
 
-      discard addFly(sample vs, sample pilots, o, d, t)
+      discard addFly(sample vs, sample pilots, o, d, t, 300.Natural)

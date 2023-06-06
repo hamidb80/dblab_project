@@ -1,6 +1,6 @@
-import std/times
+import std/[times, strformat]
 import karax/[karaxdsl, vdom]
-import dbm
+import dbm, ui
 
 
 func page*(title: string, page: VNode): VNode =
@@ -62,12 +62,20 @@ func flysTable*(tks: seq[auto]): VNode =
     table(class = "table table-hover"):
       thead:
         tr:
-          for name in ["مبدا", "مقصد", "شرکت", "پرواز",
-              "باقی مانده"]:
+          for (name, iconClass) in [
+            ("مبدا", "map-marker-alt"),
+            ("مقصد", "map-marked"),
+            ("شرکت", "building"),
+            ("پرواز", "plane-departure"),
+            ("باقی مانده", "user-friends"),
+            ("خرید", "money-bill"),
+            ]:
             th(scope = "col"):
               text name
+              span(class = "m-1")
+              icon iconClass
 
-      tbody:
+      tbody(class = "text-center"):
         for i, t in tks:
           tr(class = (if i mod 2 == 0: "table-active" else: "")):
             td: text t.origin
@@ -75,6 +83,9 @@ func flysTable*(tks: seq[auto]): VNode =
             td: text t.company
             td: text $t.takeoff
             td: text $t.left
+            td:
+              a(class = "btn btn-success", href = fmt"/fly/{t.id}/buy"):
+                icon"money-bill"
 
 func ticketsPage*(tks: seq[Ticket]): VNode =
   buildHtml tdiv()

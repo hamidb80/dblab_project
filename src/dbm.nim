@@ -1,5 +1,5 @@
 import std/[times, options, sha1]
-import ponairi, labeledtypes
+import ponairi
 
 type
   ID* = int64
@@ -48,7 +48,13 @@ type
     id* {.primary, autoIncrement.}: ID
     fly_id* {.references: Fly.id.}: ID
     seat*: Positive
-    reserved_by*: Option[int]
+    cost*: Natural
+
+  Purchase* = object
+    id* {.primary, autoIncrement.}: ID
+    iternationalCode*: ID
+    ticket_id* {.references: Ticket.id, uniqueIndex.}: ID
+    timestamp*: DateTime
 
 # ---
 
@@ -59,8 +65,8 @@ template db*: untyped =
 
 proc initDB* =
   db.create(
-    Admin, AuthCookie, 
-    Country, City, Airport, Company, Airplane, Fly, Ticket)
+    Admin, AuthCookie,
+    Country, City, Airport, Company, Airplane, Fly, Ticket, Purchase)
 
 # ---
 
@@ -79,7 +85,8 @@ proc addCompany*(name: string): ID =
 proc addAirplane*(model: string, cap: int, company: ID): ID =
   db.insertID Airplane(model: model, company_id: company, capacity: cap)
 
-proc addFly*(aid: ID, pilot: string, org, dest: ID, t: DateTime): ID =
+proc addFly*(aid: ID, pilot: string, org, dest: ID, t: DateTime,
+    cost: Natural): ID =
   result = db.insertID Fly(
     airplane_id: aid,
     pilot: pilot,
@@ -93,7 +100,8 @@ proc addFly*(aid: ID, pilot: string, org, dest: ID, t: DateTime): ID =
   s.exec sql"BEGIN"
 
   for i in 1..ap.capacity:
-    s.exec sql"INSERT INTO Ticket (fly_id, seat) VALUES (?, ?)", result, i
+    s.exec sql"INSERT INTO Ticket (fly_id, seat, cost) VALUES (?, ?, ?)",
+        result, i, cost
 
   s.exec sql"COMMIT"
 
@@ -102,36 +110,36 @@ proc addFly*(aid: ID, pilot: string, org, dest: ID, t: DateTime): ID =
 proc getAllAirCompanies*: auto =
   db.find(seq[Company])
 
-proc allAdmins*: seq[(string,)] = 
+proc allAdmins*: seq[(string, )] =
   db.find(
-    seq[tuple[name: string]], 
+    seq[tuple[name: string]],
     sql"SELECT username FROM Admin")
 
-proc addAdmin*(uname, pass: string) = 
+proc addAdmin*(uname, pass: string) =
   discard db.insertID Admin(
-    username: uname, 
+    username: uname,
     hashedPass: $secureHash pass)
 
-proc isAdmin*(uname, pass: string): bool = 
+proc isAdmin*(uname, pass: string): bool =
   db.getAllRows(sql"""
-    SELECT 1 
+    SELECT 1
     FROM Admin
     WHERE
       username = ? AND
       hashedPass = ?
   """, uname, $secureHash pass).len == 1
 
-proc addCookieFor*(cookie, uname: string) = 
+proc addCookieFor*(cookie, uname: string) =
   discard db.insertID(AuthCookie(username: uname, cookie: cookie))
 
-proc isAuthenticated*(cookie: string): bool = 
+proc isAuthenticated*(cookie: string): bool =
   db.getAllRows(sql"SELECT 1 FROM AuthCookie WHERE cookie = ?", cookie).len != 0
 
-# proc getAdmin*(cookie: string): !(username: string) = 
+# proc getAdmin*(cookie: string): !(username: string) =
 #   db.getAllRows(sql"""
 #     SELECT username
 #     FROM AuthCookie
-#     WHERE cookie = ?  
+#     WHERE cookie = ?
 #   """, cookie)[0][0].s
 
 # TODO add filter by destination/origin/time
@@ -143,7 +151,20 @@ proc getActiveFlys*: auto =
       f.id,
       ( cto.name ||  ', ' || cno.name ) origin_address,
       ( ctd.name ||  ', ' || cnd.name ) dest_address, 
-      cp.name, f.takeoff, t.c
+      cp.name, f.takeoff, (
+        (
+          SELECT COUNT(1) 
+          FROM Ticket t 
+          WHERE t.fly_id = f.id
+        ) - (
+          SELECT COUNT(1)
+          FROM Purchase p 
+          JOIN Ticket t
+          ON 
+            p.ticket_id = t.id AND
+            t.fly_id = f.id
+        )
+      )
     FROM 
       Fly f
     
@@ -158,15 +179,28 @@ proc getActiveFlys*: auto =
     JOIN Airplane ap ON ap.id = f.airplane_id
     JOIN Company cp ON ap.company_id = cp.id
 
-    JOIN (
-      SELECT t.fly_id, t.reserved_by, COUNT(1) c
-      FROM Ticket t
-      GROUP BY t.fly_id
-    ) t
-    ON  
-      t.fly_id = f.id AND
-      t.reserved_by IS NULL
-
     WHERE unixepoch(f.takeoff) - unixepoch('now') > 60 * 60 * 1
     ORDER BY f.takeoff DESC
   """)
+
+proc getAvailableSeats*(fid: ID): auto =
+  db.find(seq[tuple[id: ID, seat: int, cost: Natural]],
+      sql"""
+    SELECT t.id, t.seat, t.cost
+    FROM Ticket t
+    WHERE 
+      t.fly_id = ? AND
+      NOT EXISTS (
+        SELECT 1 
+        FROM Purchase p
+        WHERE p.ticket_id = t.id
+      )
+    ORDER BY t.seat
+  """, fid)
+
+proc registerTicket*(ticketId, internationalCode: int): ID =
+  db.insertID(Purchase(
+    iternationalCode: internationalCode,
+    ticket_id: ticketId,
+    timestamp: now()))
+  # FIXME unique constraint does not work

@@ -1,4 +1,4 @@
-import std/[os, tables, oids, times]
+import std/[os, tables, oids, times, strutils, sequtils, db_sqlite]
 import jester, karax/[vdom]
 import dbm, forms, pages, kform
 
@@ -39,8 +39,24 @@ when isMainModule:
       else:
         resp "invalid auth"
 
-    # get "/me":
+    get "/fly/@id/buy":
+      let
+        fid = parseint @"id"
+        options = (getAvailableSeats fid).mapIt (it[0].int, it[1])
+      resp $page("comapnies", wrapForm("", buyTicketForm.toVNode(fid, options)))
 
+    post "/fly/@id/buy":
+      let form = parseForm buyTicketForm
+
+      try:
+        let purchaseId = registerTicket(form.ticket_id, form.icode.parseInt)
+        resp "purchase ID: " & $purchaseId
+
+      except DbError:
+        resp "Error in DB"
+
+      except ValueError:
+        resp "form error: " & getCurrentExceptionMsg()
 
     get "/companies":
       resp $page("comapnies", companiesPage getAllAirCompanies())
