@@ -1,9 +1,15 @@
 import std/[times, strformat]
 import karax/[karaxdsl, vdom]
-import dbm, ui
+import dbm, ui, dict
 
 
-func page*(title: string, page: VNode): VNode =
+func navItem(name, link: string): VNode =
+  buildHtml:
+    li(class = "nav-item"):
+      a(class = "nav-link", href = link):
+        text name
+
+func page*(title: string, isAdmin: bool, page: VNode): VNode =
   const cssFiles = @[
     "https://bootswatch.com/5/litera/bootstrap.min.css",
     "https://use.fontawesome.com/releases/v5.7.0/css/all.css",
@@ -33,19 +39,11 @@ func page*(title: string, page: VNode): VNode =
 
             tdiv(class = "collapse navbar-collapse"):
               ul(class = "navbar-nav me-auto"):
-
-                li(class = "nav-item"):
-                  a(class = "nav-link", href = "/login"):
-                    # TODO
-                    text "Login"
-
-                li(class = "nav-item"):
-                  a(class = "nav-link active", href = "/companies"):
-                    text "my tickets"
-
-                li(class = "nav-item"):
-                  a(class = "nav-link active", href = "/companies"):
-                    text "companies"
+                if isAdmin:
+                  navItem "Logout", "/logout"
+                  navItem "companies", "/companies"
+                else:
+                  navItem "Login", "/login"
 
         tdiv(class = "container"):
           header(class = "mb-4"):
@@ -56,6 +54,7 @@ func page*(title: string, page: VNode): VNode =
 func wrapForm*(action: string, child: VNode, `method` = "POST"): VNode =
   buildHtml form(`method` = `method`, action = action):
     child
+
 
 func flysTable*(tks: seq[auto]): VNode =
   buildHtml:
@@ -90,19 +89,44 @@ func flysTable*(tks: seq[auto]): VNode =
 func ticketsPage*(tks: seq[Ticket]): VNode =
   buildHtml tdiv()
 
-func buyTicket*(): VNode =
-  buildHtml tdiv()
+func ticketBuyReportPage*(
+  purchaseId, icode: ID,
+  origin, destination, pilot, company: string,
+  cost: int
+  ): VNode =
+
+  buildHtml tdiv():
+    definitation TPilot, pilot, "user"
+    definitation TInternationalCode, $icode, "user"
+    definitation TCost, $cost, "money-bill"
+    definitation TOrigin, origin, "money-bill"
+    definitation TDest, destination, "money-bill"
+    definitation TCompany, company, "building"
 
 func companiesPage*(acs: seq[Company]): VNode =
   buildHtml tdiv:
     h3:
       text "companies"
 
+    a(href = "/companies/add", class = "btn btn-outline-success my-2 w-100"):
+      text "add"
+      span(class = "mx-1")
+      icon "plus"
+
     for ac in acs:
       ul(class = "list-group"):
         li(class = "list-group-item d-flex justify-content-between align-items-center"):
-          span:
+          a(href=fmt"/companies/{ac.id}/report", class="text-decoration-none"):
             text ac.name
 
-          span(class = "badge bg-primary rounded-pill"):
-            text "14"
+          span:
+            a(href = fmt"/companies/{ac.id}/edit", class = "btn btn-outline-warning"):
+              text "edit"
+              span(class = "mx-1")
+              icon "pen"
+
+            a(href = fmt"/companies/{ac.id}/delete", class = "btn btn-outline-danger"):
+              text "delete"
+              span(class = "mx-1")
+              icon "trash"
+

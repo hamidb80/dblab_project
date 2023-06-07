@@ -65,7 +65,7 @@ func toInput(formName, formLabel: string, inputtype,
 
   quote:
     tdiv:
-      label2(`formLabel`, `iconName`)
+      customLabel(`formLabel`, `iconName`)
 
       input(name = `formName`, class = "form-control", type = `inputtype`,
           value = $`defaultValue`)
@@ -77,7 +77,7 @@ func toSelect(formName, formLabel: string, defaultValue: NimNode,
 
   quote:
     tdiv:
-      label2(`formLabel`, `iconName`)
+      customLabel(`formLabel`, `iconName`)
 
       select(name = `formName`, class = "form-control",
           value = $`defaultValue`):

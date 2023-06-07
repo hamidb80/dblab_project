@@ -107,13 +107,6 @@ proc addFly*(aid: ID, pilot: string, org, dest: ID, t: DateTime,
 
   debugEcho "done ", result
 
-proc getAllAirCompanies*: auto =
-  db.find(seq[Company])
-
-proc allAdmins*: seq[(string, )] =
-  db.find(
-    seq[tuple[name: string]],
-    sql"SELECT username FROM Admin")
 
 proc addAdmin*(uname, pass: string) =
   discard db.insertID Admin(
@@ -135,6 +128,15 @@ proc addCookieFor*(cookie, uname: string) =
 proc isAuthenticated*(cookie: string): bool =
   db.getAllRows(sql"SELECT 1 FROM AuthCookie WHERE cookie = ?", cookie).len != 0
 
+
+proc getAllAirCompanies*: auto =
+  db.find(seq[Company])
+
+proc allAdmins*: seq[(string, )] =
+  db.find(
+    seq[tuple[name: string]],
+    sql"SELECT username FROM Admin")
+
 # proc getAdmin*(cookie: string): !(username: string) =
 #   db.getAllRows(sql"""
 #     SELECT username
@@ -143,7 +145,7 @@ proc isAuthenticated*(cookie: string): bool =
 #   """, cookie)[0][0].s
 
 # TODO add filter by destination/origin/time
-proc getActiveFlys*: auto =
+proc getActiveFlys*(src_id, dest_id: Option[int], ): auto =
   db.find(seq[tuple[id: int, origin, dest, company: string,
       takeoff: string, left: int]],
     sql"""
@@ -198,9 +200,20 @@ proc getAvailableSeats*(fid: ID): auto =
     ORDER BY t.seat
   """, fid)
 
+  # FIXME unique constraint does not work
+
 proc registerTicket*(ticketId, internationalCode: int): ID =
   db.insertID(Purchase(
     iternationalCode: internationalCode,
     ticket_id: ticketId,
     timestamp: now()))
-  # FIXME unique constraint does not work
+
+
+proc deleteCompany*(cid: ID) =
+  db.exec sql"DELETE FROM Company WHERE id = ?", cid
+
+proc getCompany*(cid: ID): Company =
+  db.find(Company, sql"SELECT * FROM Company WHERE id = ?", cid)
+
+proc updateCompany*(id: ID, name: string) =
+  db.exec sql"UPDATE Company SET name = ? WHERE id = ?", name, id

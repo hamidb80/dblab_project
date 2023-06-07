@@ -6,23 +6,26 @@ import dbm, forms, pages, kform
 template parseForm(form): untyped {.dirty.} =
   fromForm[form.data.type](request.params)
 
+template isAdmin: untyped {.dirty.} =
+  request.cookies.getOrDefault("AUTH").isAuthenticated
+
 when isMainModule:
   initDB()
 
   routes:
     get "/assets/@path":
       let s = getCurrentDir() / "assets" / @"path"
-      echo s
       sendfile s
 
+
     get "/":
-      resp $page("tickets", flysTable(getActiveFlys()))
+      resp $page("tickets", isAdmin, flysTable(getActiveFlys(none int, none int)))
 
     get "/login":
-      resp $page("login", wrapForm("/login", loginForm.toVNode()))
+      resp $page("login", isAdmin, wrapForm("/login", loginForm.toVNode()))
 
     get "/logout":
-      if request.cookies.getOrDefault("AUTH").isAuthenticated:
+      if isAdmin:
         resp "Good"
       else:
         resp "No"
@@ -39,18 +42,23 @@ when isMainModule:
       else:
         resp "invalid auth"
 
+
     get "/fly/@id/buy":
       let
         fid = parseint @"id"
         options = (getAvailableSeats fid).mapIt (it[0].int, it[1])
-      resp $page("comapnies", wrapForm("", buyTicketForm.toVNode(fid, options)))
+      resp $page("comapnies", isAdmin, wrapForm("", buyTicketForm.toVNode(fid, options)))
 
     post "/fly/@id/buy":
       let form = parseForm buyTicketForm
 
       try:
         let purchaseId = registerTicket(form.ticket_id, form.icode.parseInt)
-        resp "purchase ID: " & $purchaseId
+        resp $page("ticket report", isAdmin, ticketBuyReportPage(
+          purchaseId,
+          form.icode.parseInt,
+          "tehran", "iran", "ali", "air",
+          10))
 
       except DbError:
         resp "Error in DB"
@@ -58,12 +66,43 @@ when isMainModule:
       except ValueError:
         resp "form error: " & getCurrentExceptionMsg()
 
+
+    get "/fly/add":
+      resp "OK"
+
+    post "/fly/add":
+      resp "OK"
+
+    get "/fly/@id/cancell":
+      resp "OK"
+
+
     get "/companies":
-      resp $page("comapnies", companiesPage getAllAirCompanies())
+      resp $page("comapnies", isAdmin, companiesPage getAllAirCompanies())
 
-    get "/add-company":
-      resp $page("index", wrapForm("", airCompanyForm.toVNode(-1, "")))
+    get "/companies/@id/report":
+      # origin dest time travelers/capacity cancelled
+      resp "OK"
 
-    post "/add-company":
+    get "/companies/add":
+      resp $page("index", isAdmin, wrapForm("", airCompanyForm.toVNode(-1, "")))
+
+    post "/companies/add":
       discard addCompany airCompanyForm.parseForm.name
+      redirect "/companies"
+
+    get "/companies/@id/edit":
+      let 
+        id =  parseint @"id"
+        c = getCompany id
+      resp $page("index", isAdmin, wrapForm("", airCompanyForm.toVNode(id, c.name)))
+    
+    post "/companies/@id/edit":
+      let form = parseForm airCompanyForm
+      
+      updateCompany form.id, form.name
+      redirect "/companies"
+
+    get "/companies/@id/delete":
+      deleteCompany parseInt @"id"
       redirect "/companies"
