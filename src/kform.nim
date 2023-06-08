@@ -35,7 +35,15 @@ proc conv(a: string, dest: type DateTime): DateTime = now()
 
 proc fromForm*[T: tuple](data: StringTableRef | Table[string, string]): T =
   for k, v in result.fieldPairs:
-    v = conv(data[k], v.type)
+    v = 
+      when v.type is Option:
+        if k in data:
+          conv(data[k], v.type.T)
+        else:
+          none v.type.T
+
+      else:
+        conv(data[k], v.type)
 
 # ---
 

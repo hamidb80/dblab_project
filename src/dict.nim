@@ -6,4 +6,7 @@ const
   TBuy* = "خرید"
   TCompany* = "شرکت"
   TInternationalCode* = "کد ملی"
-  
+  Tfly* = "پرواز"
+  TDate* = "تاریخ"
+  Tid* = "شناسه"
+  Ttime* = "زمان"

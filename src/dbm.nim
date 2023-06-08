@@ -1,4 +1,4 @@
-import std/[times, options, sha1]
+import std/[times, options, sha1, strformat, strutils]
 import ponairi
 
 type
@@ -43,6 +43,7 @@ type
     origin_id* {.references: Airport.id.}: ID
     destination_id* {.references: Airport.id.}: ID
     takeoff*: DateTime
+    cancelled*: bool
 
   Ticket* = object
     id* {.primary, autoIncrement.}: ID
@@ -52,7 +53,7 @@ type
 
   Purchase* = object
     id* {.primary, autoIncrement.}: ID
-    iternationalCode*: ID
+    international_code*: ID
     ticket_id* {.references: Ticket.id, uniqueIndex.}: ID
     timestamp*: DateTime
 
@@ -125,6 +126,11 @@ proc isAdmin*(uname, pass: string): bool =
 proc addCookieFor*(cookie, uname: string) =
   discard db.insertID(AuthCookie(username: uname, cookie: cookie))
 
+proc removeCookieFor*(cookie: string) =
+  db.exec(sql"""
+    DELETE FROM AuthCookie a WHERE a.cookie = ?
+  """, cookie)
+
 proc isAuthenticated*(cookie: string): bool =
   db.getAllRows(sql"SELECT 1 FROM AuthCookie WHERE cookie = ?", cookie).len != 0
 
@@ -137,18 +143,22 @@ proc allAdmins*: seq[(string, )] =
     seq[tuple[name: string]],
     sql"SELECT username FROM Admin")
 
-# proc getAdmin*(cookie: string): !(username: string) =
-#   db.getAllRows(sql"""
-#     SELECT username
-#     FROM AuthCookie
-#     WHERE cookie = ?
-#   """, cookie)[0][0].s
 
-# TODO add filter by destination/origin/time
-proc getActiveFlys*(src_id, dest_id: Option[int], ): auto =
+proc getActiveFlys*(origin_id, dest_id, company_id: Option[int]): auto =
+  
+  var conds: seq[string]
+  if issome company_id:
+    discard
+  else:
+    conds.add "unixepoch(f.takeoff) - unixepoch('now') > 60 * 60 * 1"
+  if issome origin_id:
+    conds.add fmt"origin_id = {origin_id.get}"
+  if issome dest_id:
+    conds.add fmt"destination_id = {dest_id.get}"
+
   db.find(seq[tuple[id: int, origin, dest, company: string,
       takeoff: string, left: int]],
-    sql"""
+    sql fmt"""
     SELECT 
       f.id,
       ( cto.name ||  ', ' || cno.name ) origin_address,
@@ -181,7 +191,8 @@ proc getActiveFlys*(src_id, dest_id: Option[int], ): auto =
     JOIN Airplane ap ON ap.id = f.airplane_id
     JOIN Company cp ON ap.company_id = cp.id
 
-    WHERE unixepoch(f.takeoff) - unixepoch('now') > 60 * 60 * 1
+    WHERE {conds.join " AND "}
+
     ORDER BY f.takeoff DESC
   """)
 
@@ -204,7 +215,7 @@ proc getAvailableSeats*(fid: ID): auto =
 
 proc registerTicket*(ticketId, internationalCode: int): ID =
   db.insertID(Purchase(
-    iternationalCode: internationalCode,
+    internationalCode: internationalCode,
     ticket_id: ticketId,
     timestamp: now()))
 
@@ -217,3 +228,24 @@ proc getCompany*(cid: ID): Company =
 
 proc updateCompany*(id: ID, name: string) =
   db.exec sql"UPDATE Company SET name = ? WHERE id = ?", name, id
+
+proc getCities*: auto =
+  db.find(seq[tuple[id: ID, location: string]],
+      sql"""
+    SELECT ct.id, ct.name || ' - ' || cn.name
+    FROM CITY ct
+    JOIN Country cn
+    ON ct.country_id = cn.id
+  """)
+
+proc getTransactions*: auto =
+  db.find(seq[tuple[id, fly_id, internationalCode: ID, timestamp: string]],
+      sql"""
+    SELECT p.id, f.id, p.international_code, p.timestamp
+    FROM Purchase p
+    JOIN Ticket t
+    ON p.ticket_id = t.id
+    JOIN Fly f
+    ON f.id = t.fly_id
+    ORDER BY p.timestamp DESC
+  """)

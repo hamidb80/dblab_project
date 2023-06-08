@@ -3,17 +3,18 @@ import karax/[karaxdsl, vdom]
 import dbm, ui, dict
 
 
-func navItem(name, link: string): VNode =
+func navItem(name, iconClass, link: string): VNode =
   buildHtml:
     li(class = "nav-item"):
       a(class = "nav-link", href = link):
         text name
+        span(class = "mx-1")
+        icon iconClass
 
 func page*(title: string, isAdmin: bool, page: VNode): VNode =
   const cssFiles = @[
     "https://bootswatch.com/5/litera/bootstrap.min.css",
-    "https://use.fontawesome.com/releases/v5.7.0/css/all.css",
-    "/assets/custom.css"]
+    "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"]
 
   buildHtml:
     html:
@@ -40,10 +41,12 @@ func page*(title: string, isAdmin: bool, page: VNode): VNode =
             tdiv(class = "collapse navbar-collapse"):
               ul(class = "navbar-nav me-auto"):
                 if isAdmin:
-                  navItem "Logout", "/logout"
-                  navItem "companies", "/companies"
+                  navItem "companies", "building", "/companies"
+                  navItem "transactions", "credit-card", "/transactions"
+                  navItem "Logout", "sign-out", "/logout"
                 else:
-                  navItem "Login", "/login"
+                  navItem "Login", "right-to-bracket", "/login"
+
 
         tdiv(class = "container"):
           header(class = "mb-4"):
@@ -58,7 +61,7 @@ func wrapForm*(action: string, child: VNode, `method` = "POST"): VNode =
 
 func flysTable*(tks: seq[auto]): VNode =
   buildHtml:
-    table(class = "table table-hover"):
+    table(class = "table table-hover text-center"):
       thead:
         tr:
           for (name, iconClass) in [
@@ -86,8 +89,31 @@ func flysTable*(tks: seq[auto]): VNode =
               a(class = "btn btn-success", href = fmt"/fly/{t.id}/buy"):
                 icon"money-bill"
 
-func ticketsPage*(tks: seq[Ticket]): VNode =
-  buildHtml tdiv()
+func transactionsView*(trs: seq[auto]): VNode =
+  buildHtml table(class = "table table-hover text-center"):
+    thead:
+      for (name, iconClass) in [
+        (Tid, "hashtag"),
+        (TInternationalCode, "id-card"),
+        (Tfly, "plane"),
+        (Ttime, "clock"),
+      ]:
+        th:
+          text name
+          span(class = "mx-1")
+          icon iconClass
+
+      for t in trs:
+        tr:
+          td:
+            text $t.id
+          td:
+            text $t.internationalCode
+          td:
+            a(href = fmt"/fly/{t.fly_id}", class = ""):
+              text $t.fly_id
+          td:
+            text $t.timestamp
 
 func ticketBuyReportPage*(
   purchaseId, icode: ID,
@@ -95,15 +121,20 @@ func ticketBuyReportPage*(
   cost: int
   ): VNode =
 
-  buildHtml tdiv():
-    definitation TPilot, pilot, "user"
-    definitation TInternationalCode, $icode, "user"
-    definitation TCost, $cost, "money-bill"
-    definitation TOrigin, origin, "money-bill"
-    definitation TDest, destination, "money-bill"
-    definitation TCompany, company, "building"
+  buildHtml tdiv:
+    table(class = "table table-hover"):
+      tr: td: definitation TInternationalCode, $icode, "id-card"
+      tr: td: definitation TCost, $cost, "money-bill"
+      tr: td: definitation TOrigin, origin, "map-marker-alt"
+      tr: td: definitation TDest, destination, "map-marked"
+      tr: td: definitation TCompany, company, "building"
+      tr: td: definitation TPilot, pilot, "user"
 
-func companiesPage*(acs: seq[Company]): VNode =
+    a(href = "#", class = "btn btn-outline-primary w-100"):
+      text "print "
+      icon "print"
+
+func companiesPage*(acs: seq[Company], isAdmin: bool): VNode =
   buildHtml tdiv:
     h3:
       text "companies"
@@ -116,17 +147,21 @@ func companiesPage*(acs: seq[Company]): VNode =
     for ac in acs:
       ul(class = "list-group"):
         li(class = "list-group-item d-flex justify-content-between align-items-center"):
-          a(href=fmt"/companies/{ac.id}/report", class="text-decoration-none"):
+          a(href = fmt"/companies/{ac.id}",
+              class = "text-decoration-none"):
             text ac.name
 
           span:
-            a(href = fmt"/companies/{ac.id}/edit", class = "btn btn-outline-warning"):
-              text "edit"
-              span(class = "mx-1")
-              icon "pen"
+            if isAdmin:
+              a(href = fmt"/companies/{ac.id}/edit",
+                  class = "btn btn-outline-warning"):
+                text "edit"
+                span(class = "mx-1")
+                icon "pen"
 
-            a(href = fmt"/companies/{ac.id}/delete", class = "btn btn-outline-danger"):
-              text "delete"
-              span(class = "mx-1")
-              icon "trash"
+              a(href = fmt"/companies/{ac.id}/delete",
+                  class = "btn btn-outline-danger"):
+                text "delete"
+                span(class = "mx-1")
+                icon "trash"
 

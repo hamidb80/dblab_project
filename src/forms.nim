@@ -32,3 +32,8 @@ let
     uname as "user name": input string = "" {.icon: "user".}
     pass as "password": input Secret = "" {.icon: "lock".}
     submit "login" {.icon: "certificate".}
+
+  searchFlyForm* = kform (cities: seq[tuple[id: int64, loc: string]]):
+    origin_city as "origin": select[cities]int = -1 {.icon: "map-marker-alt".}
+    dest_city as "destination": select[cities]int = -1 {.icon: "map-marked".}
+    submit "search" {.icon: "magnifying-glass".}
