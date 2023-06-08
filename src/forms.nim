@@ -47,3 +47,9 @@ let
     capacity as "capacity": input Natural = capacity {.icon: "users".}
     pilot as "pilot": input string = pilot {.icon: "person-military-pointing".}
     submit "add" {.icon: "plus".}
+
+  addPortForm* = kform (cities: seq[City], city_id: ID, id: ID, name: string):
+    id as "id": hidden int = city_id {.icon: "map-marker-alt".}
+    city_id as "city": select[cities]ID = city_id {.icon: "map-marker-alt".}
+    name as "name": input string = name {.icon: "font".}
+    submit "add" {.icon: "plus".}

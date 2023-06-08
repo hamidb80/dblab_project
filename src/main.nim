@@ -32,7 +32,8 @@ when isMainModule:
             iff(isSome o, o.get, -1),
             iff(isSome d, d.get, -1),
         ), "GET"),
-        iff(a, linkedBtn("/fly/add", "success w-100", namedIcon("add fly", "plane")), text ""),
+        iff(a, linkedBtn("/fly/add", "success w-100", namedIcon("add fly",
+            "plane")), text ""),
         flysTable(getFlys(o, d, onlyFuture = true), a, {ftBuy})))
 
     get "/login":
@@ -103,7 +104,8 @@ when isMainModule:
 
     post "/fly/add":
       let form = parseForm addFlyFrom
-      let id = addFly(form.company_id, form.pilot, form.origin_city, form.dest_city, form.time, form.cost, form.capacity)
+      let id = addFly(form.company_id, form.pilot, form.origin_city,
+          form.dest_city, form.time, form.cost, form.capacity)
       redirect "/fly/" & $id
 
     get "/fly/@id":
@@ -167,4 +169,23 @@ when isMainModule:
     #   discard
 
     # get "/companies/@cid/planes/@pid/deprecate":
+    #   discard
+
+
+    get "/ports":
+      resp $page("ports", isAdmin, portsView allPorts())
+
+    get "/ports/add":
+      let cc = @[(-1.int64, "-")] & getCities()
+      resp $page("add port", isAdmin,
+        wrapForm("", addPortForm.toVnode(cc, -1, -1, "")))
+
+    post "/ports/add":
+      let
+        form = parseForm addPortForm
+        id = addPort(form.city_id, form.name)
+
+      redirect "/ports"
+
+    # get "/ports/@id/delete":
     #   discard

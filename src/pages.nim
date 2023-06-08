@@ -42,6 +42,7 @@ func page*(title: string, isAdmin: bool, page: VNode): VNode =
                 if isAdmin:
                   navItem "companies", "building", "/companies"
                   navItem "transactions", "credit-card", "/transactions"
+                  navItem "ports", "city", "/ports"
                   navItem "Logout", "sign-out", "/logout"
                 else:
                   navItem "Login", "right-to-bracket", "/login"
@@ -204,3 +205,21 @@ func companiesListPage*(acs: seq[Company], isAdmin: bool): VNode =
 
               linkedBtn(fmt"/companies/{ac.id}/delete", "outline-danger rtl",
                 namedIcon("delete", "trash"))
+
+func portsView*(ports: seq[auto]): VNode =
+  buildHtml tdiv:
+    a(href="/ports/add", class="btn btn-success w-100"):
+      namedIcon "add ", "hashtag"
+    
+    table(class="table text-center rtl"):
+      thead:
+        td: namedIcon "شناسه", "hashtag"
+        td: namedIcon "نام", "font"
+        td: namedIcon "شهر", "city"
+
+      tbody:
+        for p in ports:
+          tr:
+            td: text $p.id
+            td: text p.name
+            td: text p.location

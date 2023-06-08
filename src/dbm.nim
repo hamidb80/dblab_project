@@ -13,6 +13,7 @@ type
     cookie* {.primary, uniqueIndex.}: string
     username* {.references: Admin.username.}: string
 
+
   Country* = object
     id* {.primary, autoIncrement.}: ID
     name* {.uniqueIndex.}: string
@@ -87,10 +88,13 @@ proc addAirport*(city: ID, name: string): ID =
 proc addCompany*(name: string): ID =
   db.insertID Company(name: name)
 
+proc addPort*(cityId: ID, name: string): ID =
+  db.insertID Airport(cityID: cityId, name: name)
+
 # proc addPlane*(model: string, cap: int, company: ID): ID =
 #   db.insertID Plane(model: model, company_id: company, capacity: cap)
 
-proc addFly*(company_id: ID ,pilot: string, org, dest: ID, t: DateTime,
+proc addFly*(company_id: ID, pilot: string, org, dest: ID, t: DateTime,
     cost, capacity: Natural): ID =
 
   result = db.insertID Fly(
@@ -156,7 +160,7 @@ proc getFlys*(origin_id, dest_id, fly_id, company_id:
     companyFilter = "AND cp.id = " & $company_id.get
   else:
     conds.add "NOT f.cancelled"
-  
+
   if onlyFuture:
     conds.add "unixepoch(f.takeoff) - unixepoch('now') > 60 * 60 * 1"
 
@@ -219,6 +223,13 @@ proc getAvailableSeats*(fid: ID): auto =
       )
     ORDER BY t.seat
   """, fid)
+
+proc allPorts*: auto =
+  db.find(seq[tuple[id: ID, name, location: string]], sql"""
+    SELECT a.id, a.name, (ct.name || ' - ' || cn.name) FROM Airport a
+    JOIN City ct ON ct.id = a.city_id
+    JOIN Country cn ON cn.id = ct.country_id
+  """)
 
 
 proc registerTicket*(ticketId: ID, internationalCode: int): ID =
