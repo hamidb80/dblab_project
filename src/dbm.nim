@@ -31,12 +31,12 @@ type
     id* {.primary, autoIncrement.}: ID
     name* {.uniqueIndex.}: string
 
-  Plane* = object
-    id* {.primary, autoIncrement.}: ID
-    company_id* {.references: Company.id.}: ID
-    model*: string
-    capacity*: Positive
-    deprecated*: bool
+  # Plane* = object
+  #   id* {.primary, autoIncrement.}: ID
+  #   company_id* {.references: Company.id.}: ID
+  #   model*: string
+  #   capacity*: Positive
+  #   deprecated*: bool
 
   Fly* = object
     id* {.primary, autoIncrement.}: ID
@@ -69,7 +69,8 @@ template db*: untyped =
 proc initDB* =
   db.create(
     Admin, AuthCookie,
-    Country, City, Airport, Company, Plane, Fly, Ticket, Purchase)
+    Country, City, Airport, Company, # Plane, 
+    Fly, Ticket, Purchase)
 
 # ---
 
@@ -85,11 +86,12 @@ proc addAirport*(city: ID, name: string): ID =
 proc addCompany*(name: string): ID =
   db.insertID Company(name: name)
 
-proc addPlane*(model: string, cap: int, company: ID): ID =
-  db.insertID Plane(model: model, company_id: company, capacity: cap)
+# proc addPlane*(model: string, cap: int, company: ID): ID =
+#   db.insertID Plane(model: model, company_id: company, capacity: cap)
 
 proc addFly*(aid: ID, pilot: string, org, dest: ID, t: DateTime,
-    cost: Natural): ID =
+    cost, capacity: Natural): ID =
+
   result = db.insertID Fly(
     plane_id: aid,
     pilot: pilot,
@@ -97,19 +99,12 @@ proc addFly*(aid: ID, pilot: string, org, dest: ID, t: DateTime,
     destination_id: dest,
     takeoff: t)
 
-  let ap = db.find(Plane, sql"SELECT * FROM Plane WHERE id = ?", aid)
-
   let s = db
-  s.exec sql"BEGIN"
 
-  for i in 1..ap.capacity:
-    s.exec sql"INSERT INTO Ticket (fly_id, seat, cost) VALUES (?, ?, ?)",
-        result, i, cost
-
-  s.exec sql"COMMIT"
-
-  debugEcho "done ", result
-
+  s.transaction:
+    for i in 1..capacity:
+      s.exec sql"INSERT INTO Ticket (fly_id, seat, cost) VALUES (?, ?, ?)",
+          result, i, cost
 
 proc addAdmin*(uname, pass: string) =
   discard db.insertID Admin(
@@ -226,7 +221,6 @@ proc getAvailableSeats*(fid: ID): auto =
     ORDER BY t.seat
   """, fid)
 
-  # FIXME unique constraint does not work
 
 proc registerTicket*(ticketId, internationalCode: int): ID =
   db.insertID(Purchase(

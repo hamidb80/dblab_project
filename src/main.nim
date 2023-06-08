@@ -1,4 +1,4 @@
-import std/[os, tables, oids, times, strutils, sequtils, db_sqlite]
+import std/[os, tables, oids, times, strutils, strformat, sequtils, db_sqlite]
 import jester, karax/[vdom]
 import dbm, forms, pages, kform, ui, utils
 
@@ -26,8 +26,10 @@ when isMainModule:
         d = toOptionalInt(q.getOrDefault "dest_city", "-1")
 
       resp $page("tickets", a,
-        verticalGroup(2, wrapForm("/",
-          searchFlyForm.toVNode(@[(-1.int64, "-")] & getCities()), "GET"),
+        verticalGroup(2, 
+          wrapForm("/", 
+            searchFlyForm.toVNode(@[(-1.int64, "-")] & getCities()), "GET"),
+          linkedBtn("/fly/add", "success w-100", namedIcon("add fly", "plane")),
           flysTable(getFlys(o, d), a, {ftBuy})))
 
     get "/login":
@@ -58,8 +60,8 @@ when isMainModule:
 
     get "/fly/@id/buy":
       let
-        fid = parseint @"id"
-        options = (getAvailableSeats fid).mapIt (it[0].int, it[1])
+        fid = parseInt @"id"
+        options = (getAvailableSeats fid).mapIt (it[0], it[1])
       resp $page("comapnies", isAdmin, wrapForm("", buyTicketForm.toVNode(fid, options)))
 
     post "/fly/@id/buy":
@@ -83,22 +85,23 @@ when isMainModule:
         pid,
         iii.purchase.international_code,
         iii.fly.origin, iii.fly.dest, iii.fly.pilot, iii.fly.companyName,
-        10))
+        0))
       
 
     get "/fly/add":
-      # getCities()
-      resp "OK1"
+      let 
+        cities = getCities()
+        companies = getAllAirCompanies()
+
+      resp $page("add fly", isAdmin, addFlyFrom.toVnode(cities, companies,))
 
     post "/fly/add":
       resp "OK2"
 
-    get "/fly/@id":
-      resp "OK3"
-
     get "/fly/@id/cancell":
-      cancellFly(parseint @"id")
-      resp "OK3"
+      let id = parseint @"id"
+      cancellFly id
+      resp fmt"fly {id} cancelled"
 
 
     get "/companies":
@@ -140,14 +143,14 @@ when isMainModule:
         flysTable(getflys(company_id = some id), a, {ftCompanyPage})))
 
 
-    get "/companies/@id/planes":
-      discard
+    # get "/companies/@id/planes":
+    #   discard
 
-    get "/companies/@id/planes/add":
-      discard
+    # get "/companies/@id/planes/add":
+    #   discard
 
-    post "/companies/@id/planes/add":
-      discard
+    # post "/companies/@id/planes/add":
+    #   discard
 
-    get "/companies/@cid/planes/@pid/deprecate":
-      discard
+    # get "/companies/@cid/planes/@pid/deprecate":
+    #   discard

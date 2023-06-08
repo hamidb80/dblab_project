@@ -14,7 +14,10 @@ func newTupleDef(identDefs: seq[NimNode]): NimNode =
 
 # ---
 
-type Secret* = object
+type 
+  Secret* = object
+  ID* = int64
+
 
 func htmlType*(T: type int): string = "input"
 func htmlType*(T: type string): string = "input"
@@ -25,6 +28,7 @@ template nimtype*(T: type int): untyped = int
 template nimtype*(T: type string): untyped = string
 template nimtype*(T: type Secret): untyped = string
 template nimtype*(T: type DateTime): untyped = DateTime
+template nimtype*(T: type ID): untyped = ID
 
 func conv(a: string, dest: type int): int = parseInt a
 func conv(a: string, dest: type string): string = a

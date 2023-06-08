@@ -77,7 +77,7 @@ func flysTable*(tks: seq[auto], isAdmin: bool, options: set[
         tr:
           thFlyc "مبدا", "map-marker-alt"
           thFlyc "مقصد", "map-marked"
-          thFlyc "پرواز", "plane-departure"
+          thFlyc "پرواز", "clock"
 
           if ftCompanyPage in options:
             thFlyc "ظرفیت", "user-friends"

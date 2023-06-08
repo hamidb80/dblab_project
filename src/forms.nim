@@ -2,30 +2,26 @@ import std/[times]
 import kform
 import karax/[karaxdsl, vdom]
 
+type
+  City = tuple
+    id: ID
+    loc: string
+
+  Company = tuple
+    id: ID
+    name: string
+
+
 let
-  airCompanyForm* = kform (id: int, cname: string):
-    id as "id": hidden int = id
+  airCompanyForm* = kform (id: ID, cname: string):
+    id as "id": hidden ID = id
     name as "name": input string = cname {.icon: "font".}
     submit "add"
 
-  airPlaneForm* = kform (aircompany_id: int, cap: int):
-    model as "model": input string = "" {.icon: "plane".}
-    cap as "capacity": input int = cap {.icon: "users".}
-    company as "company": hidden int = aircompany_id
-    submit "add"
-
-  travelForm* = kform (aircompany_id: int, airplane_id: int):
-    company as "company": hidden int = aircompany_id
-    airplane as "airplane": hidden int = airplane_id
-    pilot as "pilot": input string = "" {.icon: "fa-graduation-cap".}
-    takeoff as "take off time": input DateTime = "" {.icon: "clock-o".}
-    destination as "destination": input string = "" {.icon: "road".}
-    submit "add" {.icon: "plus".}
-
-  buyTicketForm* = kform (fly_id: int, options: seq[(int, int)]):
-    ticket_id as "seat number": select[options]int = options[0][0]
+  buyTicketForm* = kform (fly_id: ID, options: seq[(ID, int)]):
+    ticket_id as "seat number": select[options]ID = options[0][0]
     icode as "international code": input string = ""
-    fly_id as "": hidden int = fly_id
+    fly_id as "": hidden ID = fly_id
     submit "buy" {.icon: "credit-card".}
 
   loginForm* = kform ():
@@ -33,7 +29,21 @@ let
     pass as "password": input Secret = "" {.icon: "lock".}
     submit "login" {.icon: "certificate".}
 
-  searchFlyForm* = kform (cities: seq[tuple[id: int64, loc: string]]):
-    origin_city as "origin": select[cities]int = 0 {.icon: "map-marker-alt".}
-    dest_city as "destination": select[cities]int = 0 {.icon: "map-marked".}
+  searchFlyForm* = kform (cities: seq[City]):
+    origin_city as "origin": select[cities]ID = 0 {.icon: "map-marker-alt".}
+    dest_city as "destination": select[cities]ID = 0 {.icon: "map-marked".}
     submit "search" {.icon: "magnifying-glass".}
+
+  addFlyFrom* = kform (cities: seq[City], companies: seq[Company],
+      time: DateTime, cost: Natural, capacity: Natural, pilot: string,
+      origin_city_id: ID,dest_city_id: ID, company_id: ID,
+      ):
+
+    company_id as "origin": select[companies]ID = 0 {.icon: "building".}
+    origin_city as "origin": select[cities]ID = 0 {.icon: "map-marker-alt".}
+    dest_city as "destination": select[cities]ID = 0 {.icon: "map-marked".}
+    time as "time": input DateTime = time {.icon: "clock".}
+    cost as "cost": input Natural = cost {.icon: "money".}
+    capacity as "capacity": input Natural = capacity {.icon: "users".}
+    pilot as "pilot": input string = pilot {.icon: "person-military-pointing".}
+    submit "add" {.icon: "plus".}
