@@ -14,7 +14,7 @@ func newTupleDef(identDefs: seq[NimNode]): NimNode =
 
 # ---
 
-type 
+type
   Secret* = object
   ID* = int64
 
@@ -31,6 +31,7 @@ template nimtype*(T: type DateTime): untyped = DateTime
 template nimtype*(T: type ID): untyped = ID
 
 func conv(a: string, dest: type int): int = parseInt a
+func conv(a: string, dest: type int64): int64 = parseBiggestInt a
 func conv(a: string, dest: type string): string = a
 func conv(a: string, dest: type float): float = parseFloat a
 
@@ -39,7 +40,7 @@ proc conv(a: string, dest: type DateTime): DateTime = now()
 
 proc fromForm*[T: tuple](data: StringTableRef | Table[string, string]): T =
   for k, v in result.fieldPairs:
-    v = 
+    v =
       when v.type is Option:
         if k in data:
           conv(data[k], v.type.T)
@@ -91,8 +92,7 @@ func toSelect(formName, formLabel: string, defaultValue: NimNode,
     tdiv:
       customLabel(`formLabel`, `iconName`)
 
-      select(name = `formName`, class = "form-control"):
-        
+      select(name = `formName`, class = "form-control", value = $`defaultValue`):
         for (value, name) in `options`:
           option(value = $value):
             text $name

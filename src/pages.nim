@@ -26,7 +26,7 @@ func page*(title: string, isAdmin: bool, page: VNode): VNode =
           text title
 
         link(rel = "icon", type = "image/x-icon", href = "/assets/travel.svg")
-        # script(src = "/assets/page.js", `defer` = "true")
+        script(src = "/assets/script.js", `defer` = "true")
 
         for path in cssFiles:
           link(rel = "stylesheet", href = path)

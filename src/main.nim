@@ -22,13 +22,16 @@ when isMainModule:
       let
         a = isAdmin
         q = request.params
-        o = toOptionalInt(q.getOrDefault "origin_city", "-1")
-        d = toOptionalInt(q.getOrDefault "dest_city", "-1")
+        o = toOptionalInt(q.getOrDefault("origin_city") or "", "-1")
+        d = toOptionalInt(q.getOrDefault("dest_city") or "", "-1")
 
       resp $page("tickets", a,
-        verticalGroup(2, 
-          wrapForm("/", 
-            searchFlyForm.toVNode(@[(-1.int64, "-")] & getCities()), "GET"),
+        verticalGroup(2,
+          wrapForm("/", searchFlyForm.toVNode(
+            @[(-1.int64, "-")] & getCities(),
+            iff(isSome o, o.get, -1),
+            iff(isSome d, d.get, -1),
+          ), "GET"),
           linkedBtn("/fly/add", "success w-100", namedIcon("add fly", "plane")),
           flysTable(getFlys(o, d), a, {ftBuy})))
 
@@ -78,7 +81,7 @@ when isMainModule:
         resp "form error: " & getCurrentExceptionMsg()
 
     get "/purchase/@id":
-      let 
+      let
         pid = parseint @"id"
         iii = getPurchaseFullInfo pid
       resp $page("ticket report", isAdmin, ticketBuyReportPage(
@@ -86,17 +89,26 @@ when isMainModule:
         iii.purchase.international_code,
         iii.fly.origin, iii.fly.dest, iii.fly.pilot, iii.fly.companyName,
         0))
-      
+
 
     get "/fly/add":
-      let 
-        cities = getCities()
-        companies = getAllAirCompanies()
+      let
+        cities = @[(-1.int64, "-")] & getCities()
+        companies = @[(-1.int64, "-")] & (getAllAirCompanies().mapIt (it.id, it.name))
 
-      resp $page("add fly", isAdmin, addFlyFrom.toVnode(cities, companies,))
+      resp $page("add fly", isAdmin, wrapForm("",
+      addFlyFrom.toVnode(cities, companies, now(), 100, 10, "", -1, -1, -1)))
+      
+      resp "OK"
 
     post "/fly/add":
+      let form = parseForm addFlyFrom
+      echo form
       resp "OK2"
+
+    get "/fly/@id":
+      let id = parseInt @"id"
+      resp "information"
 
     get "/fly/@id/cancell":
       let id = parseint @"id"
@@ -139,7 +151,8 @@ when isMainModule:
 
       resp $page("company", a, verticalGroup(2,
         titleHead(1, c.name, "building"),
-        linkedBtn("/companies/add", "success w-100", namedIcon("add fly", "plus")),
+        linkedBtn("/companies/add", "success w-100", namedIcon("add fly",
+            "plus")),
         flysTable(getflys(company_id = some id), a, {ftCompanyPage})))
 
 

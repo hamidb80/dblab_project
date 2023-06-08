@@ -69,7 +69,7 @@ template db*: untyped =
 proc initDB* =
   db.create(
     Admin, AuthCookie,
-    Country, City, Airport, Company, # Plane, 
+    Country, City, Airport, Company, # Plane,
     Fly, Ticket, Purchase)
 
 # ---
@@ -144,11 +144,9 @@ func showIfTrue[T](cond: bool, value: T): T =
   if cond: value
   else: default T
 
-proc inspect[T](value: T): T =
-  echo value
-  value
+proc getFlys*(origin_id, dest_id, fly_id, company_id:
+    Option[ID] = none ID): auto =
 
-proc getFlys*(origin_id, dest_id, fly_id, company_id: Option[ID] = none ID): auto =
   var
     conds: seq[string]
     companyFilter: string
@@ -166,7 +164,7 @@ proc getFlys*(origin_id, dest_id, fly_id, company_id: Option[ID] = none ID): aut
   db.find(seq[tuple[id: ID, pilot, origin, dest,
     companyName: string, companyId: ID,
     takeoff: string, capacity, used: int, cancelled: bool]],
-    sql inspect fmt"""
+    sql fmt"""
     SELECT 
       f.id,
       f.pilot,
@@ -222,7 +220,7 @@ proc getAvailableSeats*(fid: ID): auto =
   """, fid)
 
 
-proc registerTicket*(ticketId, internationalCode: int): ID =
+proc registerTicket*(ticketId: ID, internationalCode: int): ID =
   db.insertID(Purchase(
     internationalCode: internationalCode,
     ticket_id: ticketId,
@@ -263,10 +261,10 @@ proc getTransactions*: auto =
 proc cancellFly*(fid: ID) =
   db.exec sql"UPDATE Fly SET cancelled = ? WHERE id = ?", true, fid
 
-proc getPurchaseFullInfo*(pid: ID): auto = 
-  let 
+proc getPurchaseFullInfo*(pid: ID): auto =
+  let
     p = db.find(Purchase, sql"SELECT * FROM Purchase WHERE id = ?", pid)
     t = db.find(Ticket, sql"SELECT * FROM Ticket WHERE id = ?", p.ticket_id)
     f = getFlys(flyid = some t.flyid)[0]
-  
+
   (purchase: p, ticket: t, fly: f)

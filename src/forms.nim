@@ -29,9 +29,9 @@ let
     pass as "password": input Secret = "" {.icon: "lock".}
     submit "login" {.icon: "certificate".}
 
-  searchFlyForm* = kform (cities: seq[City]):
-    origin_city as "origin": select[cities]ID = 0 {.icon: "map-marker-alt".}
-    dest_city as "destination": select[cities]ID = 0 {.icon: "map-marked".}
+  searchFlyForm* = kform (cities: seq[City], origin_city: ID, dest_city: ID):
+    origin_city as "origin": select[cities]ID = origin_city {.icon: "map-marker-alt".}
+    dest_city as "destination": select[cities]ID = dest_city {.icon: "map-marked".}
     submit "search" {.icon: "magnifying-glass".}
 
   addFlyFrom* = kform (cities: seq[City], companies: seq[Company],
@@ -39,7 +39,7 @@ let
       origin_city_id: ID,dest_city_id: ID, company_id: ID,
       ):
 
-    company_id as "origin": select[companies]ID = 0 {.icon: "building".}
+    company_id as "company": select[companies]ID = 0 {.icon: "building".}
     origin_city as "origin": select[cities]ID = 0 {.icon: "map-marker-alt".}
     dest_city as "destination": select[cities]ID = 0 {.icon: "map-marked".}
     time as "time": input DateTime = time {.icon: "clock".}
