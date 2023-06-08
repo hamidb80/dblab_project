@@ -208,7 +208,7 @@ func companiesListPage*(acs: seq[Company], isAdmin: bool): VNode =
 
 func portsView*(ports: seq[auto]): VNode =
   buildHtml tdiv:
-    a(href="/ports/add", class="btn btn-success w-100"):
+    a(href="/ports/add", class="btn btn-success w-100 my-2"):
       namedIcon "add ", "hashtag"
     
     table(class="table text-center rtl"):
