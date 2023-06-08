@@ -44,6 +44,7 @@ type
     plane_id* {.references: Plane.id.}: ID
     origin_id* {.references: Airport.id.}: ID
     destination_id* {.references: Airport.id.}: ID
+    company_id* {.references: Company.id.}: ID
     takeoff*: DateTime
     cancelled*: bool
 
@@ -89,12 +90,12 @@ proc addCompany*(name: string): ID =
 # proc addPlane*(model: string, cap: int, company: ID): ID =
 #   db.insertID Plane(model: model, company_id: company, capacity: cap)
 
-proc addFly*(aid: ID, pilot: string, org, dest: ID, t: DateTime,
+proc addFly*(company_id: ID ,pilot: string, org, dest: ID, t: DateTime,
     cost, capacity: Natural): ID =
 
   result = db.insertID Fly(
-    plane_id: aid,
     pilot: pilot,
+    company_id: company_id,
     origin_id: org,
     destination_id: dest,
     takeoff: t)
@@ -145,7 +146,7 @@ func showIfTrue[T](cond: bool, value: T): T =
   else: default T
 
 proc getFlys*(origin_id, dest_id, fly_id, company_id:
-    Option[ID] = none ID): auto =
+    Option[ID] = none ID, onlyFuture = false): auto =
 
   var
     conds: seq[string]
@@ -155,21 +156,22 @@ proc getFlys*(origin_id, dest_id, fly_id, company_id:
     companyFilter = "AND cp.id = " & $company_id.get
   else:
     conds.add "NOT f.cancelled"
+  
+  if onlyFuture:
     conds.add "unixepoch(f.takeoff) - unixepoch('now') > 60 * 60 * 1"
 
   if isSome fly_id:
     conds.add "f.id = " & $fly_id.get
 
-
   db.find(seq[tuple[id: ID, pilot, origin, dest,
-    companyName: string, companyId: ID,
-    takeoff: string, capacity, used: int, cancelled: bool]],
+    companyName: string, companyId: ID, takeoff: string,
+    capacity, used: int, cancelled: bool]],
     sql fmt"""
     SELECT 
       f.id,
       f.pilot,
-      ( cto.name ||  ', ' || cno.name ) origin_address,
-      ( ctd.name ||  ', ' || cnd.name ) dest_address, 
+      ( cto.name ||  ' - ' || cno.name ) origin_address,
+      ( ctd.name ||  ' - ' || cnd.name ) dest_address, 
       cp.name, cp.id, f.takeoff, (
         SELECT COUNT(1) 
         FROM Ticket t 
@@ -195,8 +197,7 @@ proc getFlys*(origin_id, dest_id, fly_id, company_id:
     JOIN City ctd ON pd.city_id = ctd.id {iff(issome dest_id, "AND ctd.id = " & $dest_id.get, "")}
     JOIN Country cnd ON cnd.id = ctd.country_id
 
-    JOIN Plane ap ON ap.id = f.plane_id
-    JOIN Company cp ON ap.company_id = cp.id {companyFilter}
+    JOIN Company cp ON f.company_id = cp.id {companyFilter}
 
     {showIfTrue conds.len != 0, "WHERE"}
     {conds.join " AND "}

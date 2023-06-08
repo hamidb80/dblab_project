@@ -147,8 +147,25 @@ func transactionsView*(trs: seq[auto]): VNode =
           td:
             text $t.timestamp
 
+func flyInfo*(finfo: auto): VNode =
+  buildHtml tdiv:
+    table(class = "table table-hover"):
+      tr: td: definitation TOrigin, finfo.origin, "map-marker-alt"
+      tr: td: definitation TDest, finfo.dest, "map-marked"
+      tr: td: definitation TCompany, finfo.companyName, "building"
+      tr: td: definitation TDate, finfo.takeoff, "user"
+      tr: td: definitation TPilot, finfo.pilot, "user"
+      tr: td: definitation TCapacity, $finfo.capacity, "users"
+      tr: td: definitation TPassenger, $finfo.used, "users"
+      tr: td: definitation TIsCancelled, finfo.cancelled.toFa, "ban"
+
+    button(class = "btn btn-outline-primary w-100"):
+      text "print "
+      icon "print"
+
+
 func ticketBuyReportPage*(
-  purchaseId, icode: ID,
+  purchaseId, icode: ID, datetime,
   origin, destination, pilot, company: string,
   cost: int
   ): VNode =
@@ -159,6 +176,7 @@ func ticketBuyReportPage*(
       tr: td: definitation TCost, $cost, "money-bill"
       tr: td: definitation TOrigin, origin, "map-marker-alt"
       tr: td: definitation TDest, destination, "map-marked"
+      tr: td: definitation TDate, datetime, "clock"
       tr: td: definitation TCompany, company, "building"
       tr: td: definitation TPilot, pilot, "user"
 

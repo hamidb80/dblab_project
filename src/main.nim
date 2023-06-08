@@ -31,9 +31,9 @@ when isMainModule:
             @[(-1.int64, "-")] & getCities(),
             iff(isSome o, o.get, -1),
             iff(isSome d, d.get, -1),
-          ), "GET"),
-          linkedBtn("/fly/add", "success w-100", namedIcon("add fly", "plane")),
-          flysTable(getFlys(o, d), a, {ftBuy})))
+        ), "GET"),
+        iff(a, linkedBtn("/fly/add", "success w-100", namedIcon("add fly", "plane")), text ""),
+        flysTable(getFlys(o, d, onlyFuture = true), a, {ftBuy})))
 
     get "/login":
       resp $page("login", isAdmin, wrapForm("/login", loginForm.toVNode()))
@@ -41,9 +41,8 @@ when isMainModule:
     get "/logout":
       if isAdmin:
         removeCookieFor request.cookies.getOrDefault("AUTH")
-        resp "removed"
-      else:
-        resp "No"
+
+      redirect "/"
 
     post "/login":
       echo allAdmins()
@@ -84,9 +83,10 @@ when isMainModule:
       let
         pid = parseint @"id"
         iii = getPurchaseFullInfo pid
+
       resp $page("ticket report", isAdmin, ticketBuyReportPage(
         pid,
-        iii.purchase.international_code,
+        iii.purchase.international_code, iii.fly.takeoff,
         iii.fly.origin, iii.fly.dest, iii.fly.pilot, iii.fly.companyName,
         0))
 
@@ -98,17 +98,20 @@ when isMainModule:
 
       resp $page("add fly", isAdmin, wrapForm("",
       addFlyFrom.toVnode(cities, companies, now(), 100, 10, "", -1, -1, -1)))
-      
+
       resp "OK"
 
     post "/fly/add":
       let form = parseForm addFlyFrom
-      echo form
-      resp "OK2"
+      let id = addFly(form.company_id, form.pilot, form.origin_city, form.dest_city, form.time, form.cost, form.capacity)
+      redirect "/fly/" & $id
 
     get "/fly/@id":
-      let id = parseInt @"id"
-      resp "information"
+      let
+        id = parseInt @"id"
+        f = getFlys(flyid = some id)[0]
+
+      resp $page("fly info", isAdmin, flyInfo f)
 
     get "/fly/@id/cancell":
       let id = parseint @"id"
@@ -151,8 +154,6 @@ when isMainModule:
 
       resp $page("company", a, verticalGroup(2,
         titleHead(1, c.name, "building"),
-        linkedBtn("/companies/add", "success w-100", namedIcon("add fly",
-            "plus")),
         flysTable(getflys(company_id = some id), a, {ftCompanyPage})))
 
 

@@ -35,8 +35,8 @@ func conv(a: string, dest: type int64): int64 = parseBiggestInt a
 func conv(a: string, dest: type string): string = a
 func conv(a: string, dest: type float): float = parseFloat a
 
-# FIXME https://nim-lang.org/docs/times.html
-proc conv(a: string, dest: type DateTime): DateTime = now()
+proc conv(a: string, dest: type DateTime): DateTime = 
+  parse(a, "yyyy-MM-dd'T'hh:mm")
 
 proc fromForm*[T: tuple](data: StringTableRef | Table[string, string]): T =
   for k, v in result.fieldPairs:

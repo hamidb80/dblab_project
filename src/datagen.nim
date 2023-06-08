@@ -7,10 +7,10 @@ let
     "ماهان",
     "ایران ایر"]
 
-  airplanes: seq[tuple[model: string, capacity: int]] = @[
-    ("Boeing 707", 137),
-    ("Boeing 727", 106),
-    ("Embraer Lineage 1000E", 19)]
+  # airplanes: seq[tuple[model: string, capacity: int]] = @[
+  #   ("Boeing 707", 137),
+  #   ("Boeing 727", 106),
+  #   ("Embraer Lineage 1000E", 19)]
 
   pilots = @[
     "فریدون ذوالفقاری",
@@ -69,15 +69,16 @@ when isMainModule:
   for c in companies:
     let
       ci = addCompany c
-      vs = collect:
-        for i in 1..rand(1..20):
-          let airplane = sample airplanes
-          addplane(airplane.model, airplane.capacity, ci)
+      # vs = collect:
+      #   for i in 1..rand(1..20):
+      #     let airplane = sample airplanes
+      #     addplane(airplane.model, airplane.capacity, ci)
 
     for i in 1..rand(1..30):
       let
         o = sample airports_ids
         d = sample airports_ids
+        cap = rand 10 .. 100
         t = now() + initDuration(minutes = rand(1..1000))
 
-      discard addFly(sample vs, sample pilots, o, d, t, 300.Natural)
+      discard addFly(ci, sample pilots, o, d, t, 300.Natural, cap)
