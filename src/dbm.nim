@@ -1,5 +1,6 @@
 import std/[times, options, sha1, strformat, strutils]
 import ponairi
+import utils
 
 type
   ID* = int64
@@ -30,16 +31,17 @@ type
     id* {.primary, autoIncrement.}: ID
     name* {.uniqueIndex.}: string
 
-  Airplane* = object
+  Plane* = object
     id* {.primary, autoIncrement.}: ID
     company_id* {.references: Company.id.}: ID
     model*: string
     capacity*: Positive
+    deprecated*: bool
 
   Fly* = object
     id* {.primary, autoIncrement.}: ID
     pilot*: string
-    airplane_id* {.references: Airplane.id.}: ID
+    plane_id* {.references: Plane.id.}: ID
     origin_id* {.references: Airport.id.}: ID
     destination_id* {.references: Airport.id.}: ID
     takeoff*: DateTime
@@ -67,7 +69,7 @@ template db*: untyped =
 proc initDB* =
   db.create(
     Admin, AuthCookie,
-    Country, City, Airport, Company, Airplane, Fly, Ticket, Purchase)
+    Country, City, Airport, Company, Plane, Fly, Ticket, Purchase)
 
 # ---
 
@@ -83,19 +85,19 @@ proc addAirport*(city: ID, name: string): ID =
 proc addCompany*(name: string): ID =
   db.insertID Company(name: name)
 
-proc addAirplane*(model: string, cap: int, company: ID): ID =
-  db.insertID Airplane(model: model, company_id: company, capacity: cap)
+proc addPlane*(model: string, cap: int, company: ID): ID =
+  db.insertID Plane(model: model, company_id: company, capacity: cap)
 
 proc addFly*(aid: ID, pilot: string, org, dest: ID, t: DateTime,
     cost: Natural): ID =
   result = db.insertID Fly(
-    airplane_id: aid,
+    plane_id: aid,
     pilot: pilot,
     origin_id: org,
     destination_id: dest,
     takeoff: t)
 
-  let ap = db.find(Airplane, sql"SELECT * FROM Airplane WHERE id = ?", aid)
+  let ap = db.find(Plane, sql"SELECT * FROM Plane WHERE id = ?", aid)
 
   let s = db
   s.exec sql"BEGIN"
@@ -128,7 +130,7 @@ proc addCookieFor*(cookie, uname: string) =
 
 proc removeCookieFor*(cookie: string) =
   db.exec(sql"""
-    DELETE FROM AuthCookie a WHERE a.cookie = ?
+    DELETE FROM AuthCookie WHERE cookie = ?
   """, cookie)
 
 proc isAuthenticated*(cookie: string): bool =
@@ -143,55 +145,68 @@ proc allAdmins*: seq[(string, )] =
     seq[tuple[name: string]],
     sql"SELECT username FROM Admin")
 
+func showIfTrue[T](cond: bool, value: T): T =
+  if cond: value
+  else: default T
 
-proc getActiveFlys*(origin_id, dest_id, company_id: Option[int]): auto =
-  
-  var conds: seq[string]
+proc inspect[T](value: T): T =
+  echo value
+  value
+
+proc getFlys*(origin_id, dest_id, fly_id, company_id: Option[ID] = none ID): auto =
+  var
+    conds: seq[string]
+    companyFilter: string
+
   if issome company_id:
-    discard
+    companyFilter = "AND cp.id = " & $company_id.get
   else:
+    conds.add "NOT f.cancelled"
     conds.add "unixepoch(f.takeoff) - unixepoch('now') > 60 * 60 * 1"
-  if issome origin_id:
-    conds.add fmt"origin_id = {origin_id.get}"
-  if issome dest_id:
-    conds.add fmt"destination_id = {dest_id.get}"
 
-  db.find(seq[tuple[id: int, origin, dest, company: string,
-      takeoff: string, left: int]],
-    sql fmt"""
+  if isSome fly_id:
+    conds.add "f.id = " & $fly_id.get
+
+
+  db.find(seq[tuple[id: ID, pilot, origin, dest,
+    companyName: string, companyId: ID,
+    takeoff: string, capacity, used: int, cancelled: bool]],
+    sql inspect fmt"""
     SELECT 
       f.id,
+      f.pilot,
       ( cto.name ||  ', ' || cno.name ) origin_address,
       ( ctd.name ||  ', ' || cnd.name ) dest_address, 
-      cp.name, f.takeoff, (
-        (
-          SELECT COUNT(1) 
-          FROM Ticket t 
-          WHERE t.fly_id = f.id
-        ) - (
-          SELECT COUNT(1)
-          FROM Purchase p 
-          JOIN Ticket t
-          ON 
-            p.ticket_id = t.id AND
-            t.fly_id = f.id
-        )
-      )
+      cp.name, cp.id, f.takeoff, (
+        SELECT COUNT(1) 
+        FROM Ticket t 
+        WHERE t.fly_id = f.id
+      ) capacity, 
+      (
+        SELECT COUNT(1)
+        FROM Purchase p 
+        JOIN Ticket t
+        ON 
+          p.ticket_id = t.id AND
+          t.fly_id = f.id
+      ) used,
+      f.cancelled
     FROM 
       Fly f
     
     JOIN Airport po ON po.id = f.origin_id
-    JOIN City cto ON po.city_id = cto.id
+    JOIN City cto ON po.city_id = cto.id {iff(issome origin_id, "AND cto.id = " & $origin_id.get, "")}
     JOIN Country cno ON cno.id = cto.country_id
 
     JOIN Airport pd ON pd.id = f.destination_id
-    JOIN City ctd ON pd.city_id = ctd.id
+    JOIN City ctd ON pd.city_id = ctd.id {iff(issome dest_id, "AND ctd.id = " & $dest_id.get, "")}
     JOIN Country cnd ON cnd.id = ctd.country_id
 
-    JOIN Airplane ap ON ap.id = f.airplane_id
-    JOIN Company cp ON ap.company_id = cp.id
+    JOIN Plane ap ON ap.id = f.plane_id
+    JOIN Company cp ON ap.company_id = cp.id {companyFilter}
 
-    WHERE {conds.join " AND "}
+    {showIfTrue conds.len != 0, "WHERE"}
+    {conds.join " AND "}
 
     ORDER BY f.takeoff DESC
   """)
@@ -249,3 +264,15 @@ proc getTransactions*: auto =
     ON f.id = t.fly_id
     ORDER BY p.timestamp DESC
   """)
+
+
+proc cancellFly*(fid: ID) =
+  db.exec sql"UPDATE Fly SET cancelled = ? WHERE id = ?", true, fid
+
+proc getPurchaseFullInfo*(pid: ID): auto = 
+  let 
+    p = db.find(Purchase, sql"SELECT * FROM Purchase WHERE id = ?", pid)
+    t = db.find(Ticket, sql"SELECT * FROM Ticket WHERE id = ?", p.ticket_id)
+    f = getFlys(flyid = some t.flyid)[0]
+  
+  (purchase: p, ticket: t, fly: f)

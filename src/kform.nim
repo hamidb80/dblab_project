@@ -87,8 +87,7 @@ func toSelect(formName, formLabel: string, defaultValue: NimNode,
     tdiv:
       customLabel(`formLabel`, `iconName`)
 
-      select(name = `formName`, class = "form-control",
-          value = $`defaultValue`):
+      select(name = `formName`, class = "form-control"):
         
         for (value, name) in `options`:
           option(value = $value):

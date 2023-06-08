@@ -72,7 +72,7 @@ when isMainModule:
       vs = collect:
         for i in 1..rand(1..20):
           let airplane = sample airplanes
-          addAirplane(airplane.model, airplane.capacity, ci)
+          addplane(airplane.model, airplane.capacity, ci)
 
     for i in 1..rand(1..30):
       let

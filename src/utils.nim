@@ -16,3 +16,12 @@ template toStr*(smth): int =
 
 template raisee*(err, msg): untyped =
   raise newException(err, msg)
+
+template iff*(cond, vtrue, vfalse): untyped =
+  if cond: vtrue
+  else: vfalse
+
+converter toBigger*(i: int): int64 = i.int64
+converter toBigger*(io: Option[int]): Option[int64] = 
+  if isSome io: some io.get.int64
+  else: none int64

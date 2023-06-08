@@ -20,14 +20,15 @@ when isMainModule:
 
     get "/":
       let
+        a = isAdmin
         q = request.params
         o = toOptionalInt(q.getOrDefault "origin_city", "-1")
         d = toOptionalInt(q.getOrDefault "dest_city", "-1")
 
-      resp $page("tickets", isAdmin,
-        groupVertical(2, wrapForm("/",
+      resp $page("tickets", a,
+        verticalGroup(2, wrapForm("/",
           searchFlyForm.toVNode(@[(-1.int64, "-")] & getCities()), "GET"),
-          flysTable(getActiveFlys(o, d))))
+          flysTable(getFlys(o, d), a, {ftBuy})))
 
     get "/login":
       resp $page("login", isAdmin, wrapForm("/login", loginForm.toVNode()))
@@ -65,12 +66,8 @@ when isMainModule:
       let form = parseForm buyTicketForm
 
       try:
-        let purchaseId = registerTicket(form.ticket_id, form.icode.parseInt)
-        resp $page("ticket report", isAdmin, ticketBuyReportPage(
-          purchaseId,
-          form.icode.parseInt,
-          "tehran", "iran", "ali", "air",
-          10))
+        let pid = registerTicket(form.ticket_id, form.icode.parseInt)
+        redirect "/purchase/" & $pid
 
       except DbError:
         resp "Error in DB"
@@ -78,7 +75,16 @@ when isMainModule:
       except ValueError:
         resp "form error: " & getCurrentExceptionMsg()
 
-
+    get "/purchase/@id":
+      let 
+        pid = parseint @"id"
+        iii = getPurchaseFullInfo pid
+      resp $page("ticket report", isAdmin, ticketBuyReportPage(
+        pid,
+        iii.purchase.international_code,
+        iii.fly.origin, iii.fly.dest, iii.fly.pilot, iii.fly.companyName,
+        10))
+      
 
     get "/fly/add":
       # getCities()
@@ -91,12 +97,13 @@ when isMainModule:
       resp "OK3"
 
     get "/fly/@id/cancell":
+      cancellFly(parseint @"id")
       resp "OK3"
 
 
     get "/companies":
       let a = isAdmin
-      resp $page("comapnies", a, companiesPage(getAllAirCompanies(), a))
+      resp $page("comapnies", a, companiesListPage(getAllAirCompanies(), a))
 
     get "/companies/add":
       resp $page("index", isAdmin, wrapForm("", airCompanyForm.toVNode(-1, "")))
@@ -122,8 +129,16 @@ when isMainModule:
       redirect "/companies"
 
     get "/companies/@id":
-      # origin dest time travelers/capacity cancelled
-      resp "OK4"
+      let
+        id = parseint @"id"
+        c = getCompany id
+        a = isAdmin
+
+      resp $page("company", a, verticalGroup(2,
+        titleHead(1, c.name, "building"),
+        linkedBtn("/companies/add", "success w-100", namedIcon("add fly", "plus")),
+        flysTable(getflys(company_id = some id), a, {ftCompanyPage})))
+
 
     get "/companies/@id/planes":
       discard
@@ -134,5 +149,5 @@ when isMainModule:
     post "/companies/@id/planes/add":
       discard
 
-    get "/companies/@cid/planes/@pid":
+    get "/companies/@cid/planes/@pid/deprecate":
       discard

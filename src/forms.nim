@@ -23,7 +23,7 @@ let
     submit "add" {.icon: "plus".}
 
   buyTicketForm* = kform (fly_id: int, options: seq[(int, int)]):
-    ticket_id as "seat number": select[options]int = options[0]
+    ticket_id as "seat number": select[options]int = options[0][0]
     icode as "international code": input string = ""
     fly_id as "": hidden int = fly_id
     submit "buy" {.icon: "credit-card".}
@@ -34,6 +34,6 @@ let
     submit "login" {.icon: "certificate".}
 
   searchFlyForm* = kform (cities: seq[tuple[id: int64, loc: string]]):
-    origin_city as "origin": select[cities]int = -1 {.icon: "map-marker-alt".}
-    dest_city as "destination": select[cities]int = -1 {.icon: "map-marked".}
+    origin_city as "origin": select[cities]int = 0 {.icon: "map-marker-alt".}
+    dest_city as "destination": select[cities]int = 0 {.icon: "map-marked".}
     submit "search" {.icon: "magnifying-glass".}
