@@ -18,11 +18,18 @@ let
     name as "name": input string = cname {.icon: "font".}
     submit "add"
 
-  buyTicketForm* = kform (fly_id: ID, options: seq[(ID, int)]):
+  buyTicketForm* = kform (fly_id: ID, options: seq[(ID, int)], cost: Natural):
     ticket_id as "seat number": select[options]ID = options[0][0]
     icode as "international code": input string = ""
     fly_id as "": hidden ID = fly_id
+    show "cost" = cost {.icon: "dollar".}
     submit "buy" {.icon: "credit-card".}
+
+  addLocationForm* = kform ():
+    country as "country": input string = "" {.icon: "globe".}
+    city as "city": input string = "" {.icon: "map-location-dot".}
+    submit "add" {.icon: "plus".}
+
 
   loginForm* = kform ():
     uname as "user name": input string = "" {.icon: "user".}
@@ -34,14 +41,14 @@ let
     dest_city as "destination": select[cities]ID = dest_city {.icon: "map-marked".}
     submit "search" {.icon: "magnifying-glass".}
 
-  addFlyFrom* = kform (cities: seq[City], companies: seq[Company],
+  addFlyFrom* = kform (ports: seq[City], companies: seq[Company],
       time: DateTime, cost: Natural, capacity: Natural, pilot: string,
-      origin_city_id: ID,dest_city_id: ID, company_id: ID,
+      origin_city_id: ID, dest_city_id: ID, company_id: ID,
       ):
 
     company_id as "company": select[companies]ID = 0 {.icon: "building".}
-    origin_city as "origin": select[cities]ID = 0 {.icon: "map-marker-alt".}
-    dest_city as "destination": select[cities]ID = 0 {.icon: "map-marked".}
+    origin_city as "origin": select[ports]ID = 0 {.icon: "map-marker-alt".}
+    dest_city as "destination": select[ports]ID = 0 {.icon: "map-marked".}
     time as "time": input DateTime = time {.icon: "clock".}
     cost as "cost": input Natural = cost {.icon: "money".}
     capacity as "capacity": input Natural = capacity {.icon: "users".}

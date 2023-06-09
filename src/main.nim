@@ -25,15 +25,15 @@ when isMainModule:
         o = toOptionalInt(q.getOrDefault("origin_city") or "", "-1")
         d = toOptionalInt(q.getOrDefault("dest_city") or "", "-1")
 
-      resp $page("tickets", a,
-        verticalGroup(2,
-          wrapForm("/", searchFlyForm.toVNode(
-            @[(-1.int64, "-")] & getCities(),
-            iff(isSome o, o.get, -1),
-            iff(isSome d, d.get, -1),
+      resp $page("tickets", a, verticalGroup(2,
+        wrapForm("/", searchFlyForm.toVNode(
+          @[(-1.int64, "-")] & getCities(),
+          iff(isSome o, o.get, -1),
+          iff(isSome d, d.get, -1),
         ), "GET"),
-        iff(a, linkedBtn("/fly/add", "success w-100", namedIcon("add fly",
-            "plane")), text ""),
+        iff(a,
+          linkedBtn("/fly/add", "success w-100", namedIcon("add fly", "plane")), 
+          emptyVnode()),
         flysTable(getFlys(o, d, onlyFuture = true), a, {ftBuy})))
 
     get "/login":
@@ -65,7 +65,12 @@ when isMainModule:
       let
         fid = parseInt @"id"
         options = (getAvailableSeats fid).mapIt (it[0], it[1])
-      resp $page("comapnies", isAdmin, wrapForm("", buyTicketForm.toVNode(fid, options)))
+        fly = getFlys(flyid = some fid)[0]
+
+      resp $page("comapnies", isAdmin,
+        verticalGroup(2,
+          flyInfo fly,
+          wrapForm("", buyTicketForm.toVNode(fid, options, 100))))
 
     post "/fly/@id/buy":
       let form = parseForm buyTicketForm
@@ -85,20 +90,24 @@ when isMainModule:
         pid = parseint @"id"
         iii = getPurchaseFullInfo pid
 
-      resp $page("ticket report", isAdmin, ticketBuyReportPage(
-        pid,
-        iii.purchase.international_code, iii.fly.takeoff,
-        iii.fly.origin, iii.fly.dest, iii.fly.pilot, iii.fly.companyName,
-        0))
+      resp $page("ticket report", isAdmin,
+        verticalGroup(2,
+          flyInfo(iii.fly),
+          ticketBuyInfo(
+            iii.purchase.id,
+            iii.purchase.international_code,
+            iii.purchase.timestamp, iii.ticket.seat),
+            printBtn()))
 
 
     get "/fly/add":
       let
-        cities = @[(-1.int64, "-")] & getCities()
+        ports = @[(-1.int64, "-")] & allPorts().mapit (it[0], [it[1], it[
+            2]].join(" :: "))
         companies = @[(-1.int64, "-")] & (getAllAirCompanies().mapIt (it.id, it.name))
 
       resp $page("add fly", isAdmin, wrapForm("",
-      addFlyFrom.toVnode(cities, companies, now(), 100, 10, "", -1, -1, -1)))
+      addFlyFrom.toVnode(ports, companies, now(), 100, 10, "", -1, -1, -1)))
 
       resp "OK"
 
@@ -189,3 +198,17 @@ when isMainModule:
 
     # get "/ports/@id/delete":
     #   discard
+
+    get "/locations":
+      resp $page("locations", isAdmin, locationsTable allLocations())
+
+    get "/locations/add":
+      resp $page("add location", isAdmin,
+        wrapForm("", addLocationForm.toVNode()))
+
+    post "/locations/add":
+      let
+        form = parseform addLocationForm
+        id = addLocation(form.country.strip, form.city.strip)
+
+      redirect "/locations"

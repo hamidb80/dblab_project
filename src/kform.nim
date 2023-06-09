@@ -35,7 +35,7 @@ func conv(a: string, dest: type int64): int64 = parseBiggestInt a
 func conv(a: string, dest: type string): string = a
 func conv(a: string, dest: type float): float = parseFloat a
 
-proc conv(a: string, dest: type DateTime): DateTime = 
+proc conv(a: string, dest: type DateTime): DateTime =
   parse(a, "yyyy-MM-dd'T'hh:mm")
 
 proc fromForm*[T: tuple](data: StringTableRef | Table[string, string]): T =
@@ -92,7 +92,8 @@ func toSelect(formName, formLabel: string, defaultValue: NimNode,
     tdiv:
       customLabel(`formLabel`, `iconName`)
 
-      select(name = `formName`, class = "form-control", value = $`defaultValue`):
+      select(name = `formName`, class = "form-control",
+          value = $`defaultValue`):
         for (value, name) in `options`:
           option(value = $value):
             text $name
@@ -104,6 +105,16 @@ func vbtn(content: string, pragmas: seq[NimNode]): NimNode =
       text `content`
       text " "
       icon `iconName`
+
+func vShowInfo(label, content: NimNode, pragmas: seq[NimNode]): NimNode =
+  let iconName = pragmas.iconName
+
+  quote:
+    buildhtml tdiv(class = "w-100 justify-content-between"):
+      namedicon `label`, `iconName`
+      span:
+        text $`content`
+
 
 # ---
 
@@ -185,6 +196,25 @@ macro kform*(inputs, stmt): untyped =
       else:
         raisee(ValueError, fmt"invalid command {name}")
 
+    of nnkAsgn:
+      let
+        left = s[AsgnLeftSide]
+        cmd = left.callee.strval
+        label = left[CallArgs[0]]
+        right = s[AsgnRightSide]
+        (value, options) =
+          case right.kind
+          of nnkPragmaExpr: (right[0], right[1].toseq)
+          else: (right, @[])
+
+      case cmd
+      of "show":
+        htmlForm.add vShowInfo(label, value, options)
+
+      else:
+        raisee(ValueError, fmt"invalid callee {cmd}")
+
+
     else:
       raisee(ValueError, fmt"invalid node kind {s.kind} in main body")
 
@@ -198,10 +228,11 @@ macro kform*(inputs, stmt): untyped =
 
 when isMainModule:
   let
-    ff = kform (du: string):
+    ff = kform (du: string, code: string):
       uname as "user name": input string = du
       pass as "password": input Secret = ""
+      show "capcha" = code {.icon: "barcode".}
       submit "login"
 
-  echo ff.toVNode("hey")
+  echo ff.toVNode("hey", "wow")
   echo ff.data.type

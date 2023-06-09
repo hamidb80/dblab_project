@@ -43,6 +43,7 @@ func page*(title: string, isAdmin: bool, page: VNode): VNode =
                   navItem "companies", "building", "/companies"
                   navItem "transactions", "credit-card", "/transactions"
                   navItem "ports", "city", "/ports"
+                  navItem "locations", "location-dot", "/locations"
                   navItem "Logout", "sign-out", "/logout"
                 else:
                   navItem "Login", "right-to-bracket", "/login"
@@ -148,42 +149,33 @@ func transactionsView*(trs: seq[auto]): VNode =
           td:
             text $t.timestamp
 
+func printBtn*: VNode = 
+  buildHtml button(class = "btn btn-outline-primary w-100"):
+    text "print "
+    icon "print"
+
 func flyInfo*(finfo: auto): VNode =
   buildHtml tdiv:
     table(class = "table table-hover"):
-      tr: td: definitation TOrigin, finfo.origin, "map-marker-alt"
-      tr: td: definitation TDest, finfo.dest, "map-marked"
+      tr: td: definitation TOrigin, finfo.origin & " :: " & finfo.originPort, "map-marker-alt"
+      tr: td: definitation TDest, finfo.dest & " :: " & finfo.destPort, "map-marked"
       tr: td: definitation TCompany, finfo.companyName, "building"
       tr: td: definitation TDate, finfo.takeoff, "user"
-      tr: td: definitation TPilot, finfo.pilot, "user"
+      tr: td: definitation TPilot, finfo.pilot, "clock"
       tr: td: definitation TCapacity, $finfo.capacity, "users"
       tr: td: definitation TPassenger, $finfo.used, "users"
       tr: td: definitation TIsCancelled, finfo.cancelled.toFa, "ban"
 
-    button(class = "btn btn-outline-primary w-100"):
-      text "print "
-      icon "print"
 
-
-func ticketBuyReportPage*(
-  purchaseId, icode: ID, datetime,
-  origin, destination, pilot, company: string,
-  cost: int
+func ticketBuyInfo*(purchaseId, icode: ID, 
+  timestamp: DateTime, seat: Natural,
   ): VNode =
 
-  buildHtml tdiv:
-    table(class = "table table-hover"):
-      tr: td: definitation TInternationalCode, $icode, "id-card"
-      tr: td: definitation TCost, $cost, "money-bill"
-      tr: td: definitation TOrigin, origin, "map-marker-alt"
-      tr: td: definitation TDest, destination, "map-marked"
-      tr: td: definitation TDate, datetime, "clock"
-      tr: td: definitation TCompany, company, "building"
-      tr: td: definitation TPilot, pilot, "user"
-
-    button(class = "btn btn-outline-primary w-100"):
-      text "print "
-      icon "print"
+  buildHtml table(class = "table table-hover"):
+    tr: td: definitation Tid, $purchaseId, "hashtag"
+    tr: td: definitation Ttime, $timestamp, "clock"
+    tr: td: definitation TInternationalCode, $icode, "id-card"
+    tr: td: definitation TSeatNumber, $seat, "couch"
 
 func companiesListPage*(acs: seq[Company], isAdmin: bool): VNode =
   buildHtml tdiv:
@@ -208,10 +200,10 @@ func companiesListPage*(acs: seq[Company], isAdmin: bool): VNode =
 
 func portsView*(ports: seq[auto]): VNode =
   buildHtml tdiv:
-    a(href="/ports/add", class="btn btn-success w-100 my-2"):
+    a(href = "/ports/add", class = "btn btn-success w-100 my-2"):
       namedIcon "add ", "hashtag"
-    
-    table(class="table text-center rtl"):
+
+    table(class = "table text-center rtl"):
       thead:
         td: namedIcon "شناسه", "hashtag"
         td: namedIcon "نام", "font"
@@ -223,3 +215,23 @@ func portsView*(ports: seq[auto]): VNode =
             td: text $p.id
             td: text p.name
             td: text p.location
+
+func locationsTable*(locations: seq[auto]): VNode =
+  buildHtml tdiv:
+    h3:
+      namedIcon "Locations", "cities"
+
+    linkedBtn("/locations/add", "success w-100 my-2",
+      namedIcon("add", "plus"))
+
+    table(class = "table table-hover text-center"):
+      thead:
+        tr:
+          th: namedIcon "country", "globe"
+          th: namedIcon "city", "map-location-dot"
+
+      tbody:
+        for l in locations:
+          tr:
+            td: text l.country
+            td: text l.city

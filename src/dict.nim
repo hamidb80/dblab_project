@@ -3,6 +3,7 @@ const
   TCost* = "مبلغ"
   TOrigin* = "مبدا"
   TDest* = "مقصد"
+  TSeatNumber* = "شماره صندلی"
   TBuy* = "خرید"
   TCompany* = "شرکت"
   TInternationalCode* = "کد ملی"

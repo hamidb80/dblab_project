@@ -167,7 +167,7 @@ proc getFlys*(origin_id, dest_id, fly_id, company_id:
   if isSome fly_id:
     conds.add "f.id = " & $fly_id.get
 
-  db.find(seq[tuple[id: ID, pilot, origin, dest,
+  db.find(seq[tuple[id: ID, pilot, origin, dest, originPort, destPort,
     companyName: string, companyId: ID, takeoff: string,
     capacity, used: int, cancelled: bool]],
     sql fmt"""
@@ -176,6 +176,7 @@ proc getFlys*(origin_id, dest_id, fly_id, company_id:
       f.pilot,
       ( cto.name ||  ' - ' || cno.name ) origin_address,
       ( ctd.name ||  ' - ' || cnd.name ) dest_address, 
+      po.name, pd.name,
       cp.name, cp.id, f.takeoff, (
         SELECT COUNT(1) 
         FROM Ticket t 
@@ -225,12 +226,43 @@ proc getAvailableSeats*(fid: ID): auto =
   """, fid)
 
 proc allPorts*: auto =
-  db.find(seq[tuple[id: ID, name, location: string]], sql"""
+  db.find(seq[tuple[id: ID, name, location: string]],
+      sql"""
     SELECT a.id, a.name, (ct.name || ' - ' || cn.name) FROM Airport a
     JOIN City ct ON ct.id = a.city_id
     JOIN Country cn ON cn.id = ct.country_id
   """)
 
+proc allLocations*: auto =
+  db.find(seq[tuple[city, country: string]],
+      sql"""
+    SELECT ct.name, cn.name 
+    FROM City ct
+    JOIN Country cn 
+    ON ct.country_id = cn.id
+    ORDER BY ct.id DESC
+  """)
+
+proc addLocation*(country, city: string): ID =
+  let s = db
+
+  discard s.tryInsertID(sql"""
+    INSERT INTO Country (name) VALUES (?)
+    """, country)
+
+  let
+    newCountry = s.find(Country, sql"SELECT * FROM Country WHERE name = ?", country)
+    r = db.getValue(ID, sql"""
+      SELECT ct.id FROM City ct
+      JOIN Country cn
+      ON cn.id = ?
+      WHERE ct.name = ?
+    """, newCountry.id, city)
+
+  if isSome r:
+    get r
+  else:
+    s.insertID City(country_id: newCountry.id, name: city)
 
 proc registerTicket*(ticketId: ID, internationalCode: int): ID =
   db.insertID(Purchase(

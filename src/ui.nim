@@ -3,6 +3,8 @@ import karax/[karaxdsl, vdom]
 func icon*(name: string): Vnode =
   buildHTML bold(class = "fa fa-" & name)
 
+func emptyVnode*: VNode = text ""
+
 func namedIcon*(name, iconClass: string): VNode =
   buildHtml span:
     text name
