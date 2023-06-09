@@ -196,24 +196,22 @@ macro kform*(inputs, stmt): untyped =
       else:
         raisee(ValueError, fmt"invalid command {name}")
 
-    of nnkAsgn:
-      let
-        left = s[AsgnLeftSide]
-        cmd = left.callee.strval
-        label = left[CallArgs[0]]
-        right = s[AsgnRightSide]
-        (value, options) =
-          case right.kind
-          of nnkPragmaExpr: (right[0], right[1].toseq)
-          else: (right, @[])
+    # of nnkAsgn:
+    #   let
+    #     left = s[AsgnLeftSide]
+    #     cmd = left.callee.strval
+    #     label = left[CallArgs[0]]
+    #     right = s[AsgnRightSide]
+    #     (value, options) =
+    #       case right.kind
+    #       of nnkPragmaExpr: (right[0], right[1].toseq)
+    #       else: (right, @[])
 
-      case cmd
-      of "show":
-        htmlForm.add vShowInfo(label, value, options)
-
-      else:
-        raisee(ValueError, fmt"invalid callee {cmd}")
-
+    #   case cmd
+    #   of "show":
+    #     htmlForm.add vShowInfo(label, value, options)
+    #   else:
+    #     raisee(ValueError, fmt"invalid callee {cmd}")
 
     else:
       raisee(ValueError, fmt"invalid node kind {s.kind} in main body")

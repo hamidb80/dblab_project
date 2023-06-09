@@ -149,7 +149,7 @@ func transactionsView*(trs: seq[auto]): VNode =
           td:
             text $t.timestamp
 
-func printBtn*: VNode = 
+func printBtn*: VNode =
   buildHtml button(class = "btn btn-outline-primary w-100"):
     text "print "
     icon "print"
@@ -167,7 +167,7 @@ func flyInfo*(finfo: auto): VNode =
       tr: td: definitation TIsCancelled, finfo.cancelled.toFa, "ban"
 
 
-func ticketBuyInfo*(purchaseId, icode: ID, 
+func ticketBuyInfo*(purchaseId, icode: ID,
   timestamp: DateTime, seat: Natural,
   ): VNode =
 
@@ -186,8 +186,7 @@ func companiesListPage*(acs: seq[Company], isAdmin: bool): VNode =
     for ac in acs:
       ul(class = "list-group"):
         li(class = "list-group-item d-flex justify-content-between align-items-center"):
-          a(href = fmt"/companies/{ac.id}",
-              class = "text-decoration-none"):
+          a(href = fmt"/companies/{ac.id}", class = "text-decoration-none"):
             text ac.name
 
           span:

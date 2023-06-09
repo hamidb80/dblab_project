@@ -18,11 +18,10 @@ let
     name as "name": input string = cname {.icon: "font".}
     submit "add"
 
-  buyTicketForm* = kform (fly_id: ID, options: seq[(ID, int)], cost: Natural):
+  buyTicketForm* = kform (fly_id: ID, options: seq[(ID, int)]):
     ticket_id as "seat number": select[options]ID = options[0][0]
     icode as "international code": input string = ""
     fly_id as "": hidden ID = fly_id
-    show "cost" = cost {.icon: "dollar".}
     submit "buy" {.icon: "credit-card".}
 
   addLocationForm* = kform ():
