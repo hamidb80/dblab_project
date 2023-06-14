@@ -97,6 +97,8 @@ proc addPort*(cityId: ID, name: string): ID =
 proc addFly*(company_id: ID, pilot: string, org, dest: ID, t: DateTime,
     cost, capacity: Natural): ID =
 
+  let s = db
+
   result = db.insertID Fly(
     pilot: pilot,
     company_id: company_id,
@@ -104,15 +106,13 @@ proc addFly*(company_id: ID, pilot: string, org, dest: ID, t: DateTime,
     destination_id: dest,
     takeoff: t)
 
-  let s = db
-
   s.transaction:
     for i in 1..capacity:
       s.exec sql"INSERT INTO Ticket (fly_id, seat, cost) VALUES (?, ?, ?)",
           result, i, cost
 
 proc addAdmin*(uname, pass: string) =
-  discard db.insertID Admin(
+  db.insert Admin(
     username: uname,
     hashedPass: $secureHash pass)
 
@@ -126,7 +126,7 @@ proc isAdmin*(uname, pass: string): bool =
   """, uname, $secureHash pass).len == 1
 
 proc addCookieFor*(cookie, uname: string) =
-  discard db.insertID(AuthCookie(username: uname, cookie: cookie))
+  db.insert(AuthCookie(username: uname, cookie: cookie))
 
 proc removeCookieFor*(cookie: string) =
   db.exec(sql"""

@@ -39,15 +39,7 @@ when isMainModule:
     get "/login":
       resp $page("login", isAdmin, wrapForm("/login", loginForm.toVNode()))
 
-    get "/logout":
-      if isAdmin:
-        removeCookieFor request.cookies.getOrDefault("AUTH")
-
-      redirect "/"
-
     post "/login":
-      echo allAdmins()
-
       let t = parseForm loginForm
       if isAdmin(t.uname, t.pass):
         let ck = $genOid()
@@ -56,6 +48,12 @@ when isMainModule:
         redirect "/"
       else:
         resp "invalid auth"
+
+    get "/logout":
+      if isAdmin:
+        removeCookieFor request.cookies.getOrDefault("AUTH")
+
+      redirect "/"
 
 
     get "/transactions":
@@ -70,7 +68,7 @@ when isMainModule:
       resp $page("comapnies", isAdmin,
         verticalGroup(2,
           flyInfo fly,
-          wrapForm("", buyTicketForm.toVNode(fid, options, 100))))
+          wrapForm("", buyTicketForm.toVNode(fid, options))))
 
     post "/fly/@id/buy":
       let form = parseForm buyTicketForm
